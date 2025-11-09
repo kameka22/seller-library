@@ -220,7 +220,7 @@ export default function Sidebar({ activeTab, onTabChange, updateAvailable, onUpd
                   className={`text-xs truncate hover:underline cursor-pointer ${updateAvailable === false ? 'text-green-400' : 'text-gray-400'}`}
                   title="Cliquer pour vérifier les mises à jour"
                 >
-                  Version 0.1.0
+                  Version 0.1.1
                 </button>
                 {updateAvailable && (
                   <button

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext'
 import Sidebar from './components/Sidebar'
 import ObjectList from './components/ObjectList'
 import PhotoManager from './components/PhotoManager'
@@ -8,28 +9,42 @@ import Categories from './components/Categories'
 import PlatformList from './components/PlatformList'
 import Sales from './components/Sales'
 import UpdateModal from './components/UpdateModal'
+import WelcomeModal from './components/WelcomeModal'
+import UserSettings from './components/UserSettings'
 
-function App() {
+function AppContent() {
+  const { t } = useLanguage()
   const [activeTab, setActiveTab] = useState('objects-list')
   const [updateInfo, setUpdateInfo] = useState(null)
   const [showUpdateModal, setShowUpdateModal] = useState(false)
   const [updateCheckStatus, setUpdateCheckStatus] = useState(null) // null, true (update available), false (up to date)
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
+  const [showWelcome, setShowWelcome] = useState(false)
+
+  // Check if welcome modal should be shown
+  useEffect(() => {
+    const welcomeCompleted = localStorage.getItem('welcomeCompleted')
+    if (!welcomeCompleted) {
+      setShowWelcome(true)
+    }
+  }, [])
 
   const getPageTitle = () => {
     switch (activeTab) {
       case 'objects-list':
-        return 'Mes Objets'
+        return t('objects.title')
       case 'objects-categories':
-        return 'Catégories'
+        return t('categories.title')
       case 'photos-import':
-        return 'Import de Photos'
+        return t('photos.importTitle')
       case 'photos-collection':
-        return 'Collection de Photos'
+        return t('photos.title')
       case 'platforms-list':
-        return 'Plateformes de Vente'
+        return t('platforms.title')
       case 'platforms-sales':
-        return 'Ventes'
+        return t('platforms.salesTitle')
+      case 'user-settings':
+        return t('user.settings')
       default:
         return 'Seller Library'
     }
@@ -38,17 +53,19 @@ function App() {
   const getPageDescription = () => {
     switch (activeTab) {
       case 'objects-list':
-        return 'Gérez vos objets à vendre'
+        return t('objects.description')
       case 'objects-categories':
-        return 'Gérez vos catégories d\'objets'
+        return t('categories.description')
       case 'photos-import':
-        return 'Importez des photos depuis vos dossiers'
+        return t('photos.importDescription')
       case 'photos-collection':
-        return 'Organisez vos photos'
+        return t('photos.description')
       case 'platforms-list':
-        return 'Configurez vos connexions aux plateformes de vente'
+        return t('platforms.description')
       case 'platforms-sales':
-        return 'Consultez vos ventes sur toutes les plateformes'
+        return t('platforms.salesDescription')
+      case 'user-settings':
+        return t('user.settingsDescription')
       default:
         return ''
     }
@@ -140,8 +157,14 @@ function App() {
           {activeTab === 'photos-collection' && <PhotoManager />}
           {activeTab === 'platforms-list' && <PlatformList />}
           {activeTab === 'platforms-sales' && <Sales />}
+          {activeTab === 'user-settings' && <UserSettings />}
         </main>
       </div>
+
+      {/* Welcome Modal */}
+      {showWelcome && (
+        <WelcomeModal onComplete={() => setShowWelcome(false)} />
+      )}
 
       {/* Update Modal */}
       {showUpdateModal && (
@@ -152,6 +175,14 @@ function App() {
         />
       )}
     </div>
+  )
+}
+
+function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   )
 }
 

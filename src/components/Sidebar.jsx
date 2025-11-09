@@ -1,15 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 
 export default function Sidebar({ activeTab, onTabChange, updateAvailable, onUpdateClick }) {
+  const { t } = useLanguage();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [objectsExpanded, setObjectsExpanded] = useState(true);
   const [photosExpanded, setPhotosExpanded] = useState(true);
   const [listExpanded, setListExpanded] = useState(true);
+  const [userName, setUserName] = useState("");
+
+  useEffect(() => {
+    // Function to load user name from localStorage
+    const loadUserName = () => {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      setUserName(userInfo.firstName || "User");
+    };
+
+    // Load initially
+    loadUserName();
+
+    // Listen for updates
+    window.addEventListener('userInfoUpdated', loadUserName);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('userInfoUpdated', loadUserName);
+    };
+  }, []);
 
   const menuItems = [
     {
       id: "objects",
-      label: "Objets",
+      label: t('sidebar.objects'),
       icon: (
         <svg
           className="w-6 h-6"
@@ -26,13 +48,13 @@ export default function Sidebar({ activeTab, onTabChange, updateAvailable, onUpd
         </svg>
       ),
       submenu: [
-        { id: "objects-list", label: "Mes objets" },
-        { id: "objects-categories", label: "Catégories" },
+        { id: "objects-list", label: t('objects.myObjects') },
+        { id: "objects-categories", label: t('categories.title') },
       ],
     },
     {
       id: "photos",
-      label: "Photos",
+      label: t('sidebar.photos'),
       icon: (
         <svg
           className="w-6 h-6"
@@ -49,13 +71,13 @@ export default function Sidebar({ activeTab, onTabChange, updateAvailable, onUpd
         </svg>
       ),
       submenu: [
-        { id: "photos-import", label: "Import" },
-        { id: "photos-collection", label: "Collection" },
+        { id: "photos-import", label: t('photos.import') },
+        { id: "photos-collection", label: t('photos.collection') },
       ],
     },
     {
       id: "platforms",
-      label: "Plateformes",
+      label: t('sidebar.platforms'),
       icon: (
         <svg
           className="w-6 h-6"
@@ -72,8 +94,8 @@ export default function Sidebar({ activeTab, onTabChange, updateAvailable, onUpd
         </svg>
       ),
       submenu: [
-        { id: "platforms-list", label: "Liste" },
-        { id: "platforms-sales", label: "Ventes" },
+        { id: "platforms-list", label: t('platforms.list') },
+        { id: "platforms-sales", label: t('platforms.sales') },
       ],
     },
   ];
@@ -192,9 +214,41 @@ export default function Sidebar({ activeTab, onTabChange, updateAvailable, onUpd
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-800">
-        <div
-          className={`flex items-center gap-3 ${isCollapsed ? "justify-center" : ""}`}
+      <div className="border-t border-gray-800">
+        {/* Version */}
+        {!isCollapsed && (
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={onUpdateClick}
+                className={`text-xs truncate hover:underline cursor-pointer ${updateAvailable === false ? 'text-green-400' : 'text-gray-400'}`}
+                title={t('update.clickToCheck')}
+              >
+                {t('common.version')} 0.1.3
+              </button>
+              {updateAvailable && (
+                <button
+                  onClick={onUpdateClick}
+                  className="flex-shrink-0 w-4 h-4 bg-yellow-500 rounded-sm hover:bg-yellow-600 transition-colors relative group"
+                  title={t('update.title')}
+                >
+                  <svg
+                    className="w-3 h-3 text-white absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M3 6l3-3v10a2 2 0 104 0V3l3 3m6 3a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* User Block */}
+        <button
+          onClick={() => onTabChange('user-settings')}
+          className={`w-full p-4 border-t border-gray-800 hover:bg-gray-800 transition-colors flex items-center gap-3 ${isCollapsed ? "justify-center" : ""}`}
         >
           <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
             <svg
@@ -212,35 +266,12 @@ export default function Sidebar({ activeTab, onTabChange, updateAvailable, onUpd
             </svg>
           </div>
           {!isCollapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">Serge</p>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={onUpdateClick}
-                  className={`text-xs truncate hover:underline cursor-pointer ${updateAvailable === false ? 'text-green-400' : 'text-gray-400'}`}
-                  title="Cliquer pour vérifier les mises à jour"
-                >
-                  Version 0.1.2
-                </button>
-                {updateAvailable && (
-                  <button
-                    onClick={onUpdateClick}
-                    className="flex-shrink-0 w-4 h-4 bg-yellow-500 rounded-sm hover:bg-yellow-600 transition-colors relative group"
-                    title="Mise à jour disponible"
-                  >
-                    <svg
-                      className="w-3 h-3 text-white absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M3 6l3-3v10a2 2 0 104 0V3l3 3m6 3a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </button>
-                )}
-              </div>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-sm font-medium truncate">{userName}</p>
+              <p className="text-xs text-gray-400 truncate">{t('user.settings')}</p>
             </div>
           )}
-        </div>
+        </button>
       </div>
     </div>
   );

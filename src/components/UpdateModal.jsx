@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function UpdateModal({ updateInfo, onClose, onCheckUpdate, isChecking }) {
+  const { t } = useLanguage()
   const [isUpdating, setIsUpdating] = useState(false)
 
   const handleUpdate = async () => {
@@ -26,7 +28,7 @@ export default function UpdateModal({ updateInfo, onClose, onCheckUpdate, isChec
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-800">
-            Mise à jour disponible
+            {t('update.title')}
           </h2>
         </div>
 
@@ -40,7 +42,7 @@ export default function UpdateModal({ updateInfo, onClose, onCheckUpdate, isChec
                 <div className="absolute top-0 left-0 w-16 h-16 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
               </div>
               <p className="mt-4 text-gray-600 text-center">
-                Vérification de la version...
+                {t('update.checking')}
               </p>
             </div>
           ) : isUpdating ? (
@@ -51,26 +53,26 @@ export default function UpdateModal({ updateInfo, onClose, onCheckUpdate, isChec
                 <div className="absolute top-0 left-0 w-16 h-16 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
               </div>
               <p className="mt-4 text-gray-600 text-center">
-                Téléchargement et installation en cours...
+                {t('update.downloading')}
               </p>
               <p className="mt-2 text-sm text-gray-500 text-center">
-                L'application va redémarrer automatiquement
+                {t('update.willRestart')}
               </p>
             </div>
           ) : updateInfo ? (
             <>
               <div className="mb-4">
                 <p className="text-gray-700">
-                  Voulez-vous mettre à jour de la version{' '}
-                  <span className="font-semibold">{updateInfo.current_version}</span> vers
-                  la version{' '}
-                  <span className="font-semibold text-blue-600">{updateInfo.version}</span> ?
+                  {t('update.updatePrompt', {
+                    current: updateInfo.current_version,
+                    new: updateInfo.version
+                  })}
                 </p>
               </div>
 
               {changesList.length > 0 && (
                 <div className="mb-4">
-                  <h3 className="font-semibold text-gray-700 mb-2">Changements :</h3>
+                  <h3 className="font-semibold text-gray-700 mb-2">{t('update.changes')}</h3>
                   <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
                     {changesList.map((change, index) => (
                       <li key={index}>{change.replace(/^-\s*/, '')}</li>
@@ -97,7 +99,7 @@ export default function UpdateModal({ updateInfo, onClose, onCheckUpdate, isChec
                 </svg>
               </div>
               <p className="text-green-600 font-semibold text-center">
-                Votre version est à jour
+                {t('update.upToDate')}
               </p>
             </div>
           )}
@@ -112,13 +114,13 @@ export default function UpdateModal({ updateInfo, onClose, onCheckUpdate, isChec
                   onClick={onClose}
                   className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                 >
-                  Non
+                  {t('common.no')}
                 </button>
                 <button
                   onClick={handleUpdate}
                   className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                 >
-                  Oui
+                  {t('common.yes')}
                 </button>
               </>
             ) : (
@@ -126,7 +128,7 @@ export default function UpdateModal({ updateInfo, onClose, onCheckUpdate, isChec
                 onClick={onClose}
                 className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
               >
-                Fermer
+                {t('common.close')}
               </button>
             )}
           </div>

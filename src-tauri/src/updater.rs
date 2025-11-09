@@ -15,6 +15,18 @@ pub struct UpdateInfo {
 }
 
 #[derive(Debug, Deserialize)]
+struct GitHubRelease {
+    tag_name: String,
+    assets: Vec<GitHubAsset>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GitHubAsset {
+    name: String,
+    browser_download_url: String,
+}
+
+#[derive(Debug, Deserialize)]
 struct LatestRelease {
     version: String,
     notes: String,
@@ -38,9 +50,10 @@ struct PlatformInfo {
 pub async fn check_for_updates() -> Result<Option<UpdateInfo>, String> {
     println!("Checking for updates...");
 
-    let url = format!(
-        "https://github.com/{}/releases/download/{}/latest.json",
-        GITHUB_REPO, CURRENT_VERSION
+    // Utiliser l'API GitHub pour récupérer la dernière release
+    let api_url = format!(
+        "https://api.github.com/repos/{}/releases/latest",
+        GITHUB_REPO
     );
 
     let client = reqwest::Client::builder()
@@ -49,23 +62,68 @@ pub async fn check_for_updates() -> Result<Option<UpdateInfo>, String> {
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
-    let response = match client.get(&url).send().await {
+    // 1. Récupérer la dernière release depuis l'API GitHub
+    let release_response = match client.get(&api_url).send().await {
         Ok(resp) => resp,
         Err(e) => {
-            println!("Failed to fetch update info: {}", e);
+            println!("Failed to fetch latest release: {}", e);
             return Ok(None); // Silently fail
         }
     };
 
-    if !response.status().is_success() {
-        println!("Update check failed with status: {}", response.status());
+    if !release_response.status().is_success() {
+        println!(
+            "GitHub API request failed with status: {}",
+            release_response.status()
+        );
         return Ok(None); // Silently fail
     }
 
-    let latest: LatestRelease = match response.json().await {
+    let github_release: GitHubRelease = match release_response.json().await {
         Ok(data) => data,
         Err(e) => {
-            println!("Failed to parse update info: {}", e);
+            println!("Failed to parse GitHub release: {}", e);
+            return Ok(None); // Silently fail
+        }
+    };
+
+    println!("Latest release tag: {}", github_release.tag_name);
+
+    // 2. Chercher le fichier latest.json dans les assets
+    let latest_json_asset = github_release
+        .assets
+        .iter()
+        .find(|asset| asset.name == "latest.json");
+
+    if latest_json_asset.is_none() {
+        println!("latest.json not found in release assets");
+        return Ok(None); // Silently fail
+    }
+
+    let latest_json_url = &latest_json_asset.unwrap().browser_download_url;
+    println!("Downloading latest.json from: {}", latest_json_url);
+
+    // 3. Télécharger et parser le latest.json
+    let latest_response = match client.get(latest_json_url).send().await {
+        Ok(resp) => resp,
+        Err(e) => {
+            println!("Failed to download latest.json: {}", e);
+            return Ok(None); // Silently fail
+        }
+    };
+
+    if !latest_response.status().is_success() {
+        println!(
+            "Failed to download latest.json with status: {}",
+            latest_response.status()
+        );
+        return Ok(None); // Silently fail
+    }
+
+    let latest: LatestRelease = match latest_response.json().await {
+        Ok(data) => data,
+        Err(e) => {
+            println!("Failed to parse latest.json: {}", e);
             return Ok(None); // Silently fail
         }
     };

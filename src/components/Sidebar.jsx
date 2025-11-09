@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function Sidebar({ activeTab, onTabChange }) {
+export default function Sidebar({ activeTab, onTabChange, updateAvailable, onUpdateClick }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [objectsExpanded, setObjectsExpanded] = useState(true);
   const [photosExpanded, setPhotosExpanded] = useState(true);
@@ -214,7 +214,30 @@ export default function Sidebar({ activeTab, onTabChange }) {
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">Serge</p>
-              <p className="text-xs text-gray-400 truncate">Version 0.1.0</p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={onUpdateClick}
+                  className={`text-xs truncate hover:underline cursor-pointer ${updateAvailable === false ? 'text-green-400' : 'text-gray-400'}`}
+                  title="Cliquer pour vérifier les mises à jour"
+                >
+                  Version 0.1.0
+                </button>
+                {updateAvailable && (
+                  <button
+                    onClick={onUpdateClick}
+                    className="flex-shrink-0 w-4 h-4 bg-yellow-500 rounded-sm hover:bg-yellow-600 transition-colors relative group"
+                    title="Mise à jour disponible"
+                  >
+                    <svg
+                      className="w-3 h-3 text-white absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M3 6l3-3v10a2 2 0 104 0V3l3 3m6 3a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>

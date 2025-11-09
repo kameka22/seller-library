@@ -6,6 +6,7 @@
 mod db;
 mod models;
 mod commands;
+mod updater;
 
 // SqlitePool est géré par Tauri State
 
@@ -47,6 +48,8 @@ async fn main() {
             commands::list_volumes,
             commands::scan_volume_for_photos,
             commands::import_photos,
+            updater::check_for_updates,
+            updater::download_and_install_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

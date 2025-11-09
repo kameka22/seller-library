@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { invoke } from '@tauri-apps/api/tauri'
 import Sidebar from './components/Sidebar'
 import ObjectList from './components/ObjectList'
 import PhotoManager from './components/PhotoManager'
@@ -6,9 +7,14 @@ import PhotoImport from './components/PhotoImport'
 import Categories from './components/Categories'
 import PlatformList from './components/PlatformList'
 import Sales from './components/Sales'
+import UpdateModal from './components/UpdateModal'
 
 function App() {
   const [activeTab, setActiveTab] = useState('objects-list')
+  const [updateInfo, setUpdateInfo] = useState(null)
+  const [showUpdateModal, setShowUpdateModal] = useState(false)
+  const [updateCheckStatus, setUpdateCheckStatus] = useState(null) // null, true (update available), false (up to date)
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
 
   const getPageTitle = () => {
     switch (activeTab) {
@@ -48,10 +54,69 @@ function App() {
     }
   }
 
+  // Fonction pour vérifier les mises à jour
+  const checkForUpdates = async () => {
+    try {
+      const update = await invoke('check_for_updates')
+      if (update) {
+        setUpdateInfo(update)
+        setUpdateCheckStatus(true)
+      } else {
+        setUpdateCheckStatus(false)
+      }
+    } catch (error) {
+      console.error('Update check failed:', error)
+      // En cas d'erreur, on ne fait rien (silencieux)
+      setUpdateCheckStatus(null)
+    }
+  }
+
+  // Vérifier au lancement et toutes les 30 minutes
+  useEffect(() => {
+    // Vérification au lancement
+    checkForUpdates()
+
+    // Vérification toutes les 30 minutes (1800000 ms)
+    const interval = setInterval(checkForUpdates, 30 * 60 * 1000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const handleUpdateClick = async () => {
+    setShowUpdateModal(true)
+    setIsCheckingUpdate(true)
+    setUpdateInfo(null)
+
+    // Lancer la vérification
+    try {
+      const update = await invoke('check_for_updates')
+      if (update) {
+        setUpdateInfo(update)
+        setUpdateCheckStatus(true)
+      } else {
+        setUpdateCheckStatus(false)
+      }
+    } catch (error) {
+      console.error('Update check failed:', error)
+      setUpdateCheckStatus(null)
+    } finally {
+      setIsCheckingUpdate(false)
+    }
+  }
+
+  const handleCloseUpdateModal = () => {
+    setShowUpdateModal(false)
+  }
+
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <Sidebar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        updateAvailable={updateCheckStatus}
+        onUpdateClick={handleUpdateClick}
+      />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -77,6 +142,15 @@ function App() {
           {activeTab === 'platforms-sales' && <Sales />}
         </main>
       </div>
+
+      {/* Update Modal */}
+      {showUpdateModal && (
+        <UpdateModal
+          updateInfo={updateInfo}
+          onClose={handleCloseUpdateModal}
+          isChecking={isCheckingUpdate}
+        />
+      )}
     </div>
   )
 }

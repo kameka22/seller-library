@@ -352,16 +352,22 @@ export default function PhotoManager() {
           photo={selectedPhoto}
           onClose={() => setSelectedPhoto(null)}
           onPhotoUpdated={(updatedPhoto) => {
+            // Add cache buster to force image reload
+            const photoWithCacheBuster = {
+              ...updatedPhoto,
+              _cacheKey: Date.now()
+            }
+
             // Check if it's the same photo (updated) or a new copy
             const existingPhoto = photos.find(p => p.id === updatedPhoto.id)
             if (existingPhoto) {
               // Update existing photo
-              setPhotos(photos.map(p => p.id === updatedPhoto.id ? updatedPhoto : p))
+              setPhotos(photos.map(p => p.id === updatedPhoto.id ? photoWithCacheBuster : p))
             } else {
               // Add new photo (copy)
-              setPhotos([updatedPhoto, ...photos])
+              setPhotos([photoWithCacheBuster, ...photos])
             }
-            setSelectedPhoto(updatedPhoto)
+            setSelectedPhoto(photoWithCacheBuster)
           }}
         />
       )}

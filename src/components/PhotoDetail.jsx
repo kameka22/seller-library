@@ -5,16 +5,20 @@ import PhotoEditor from './PhotoEditor'
 
 export default function PhotoDetail({ photo, onClose, onPhotoUpdated }) {
   const [isEditing, setIsEditing] = useState(false)
+  const [imageKey, setImageKey] = useState(Date.now())
 
   if (!photo) return null
 
-  const imageSrc = convertFileSrc(photo.file_path)
+  // Add cache buster to force reload when image is updated
+  const imageSrc = `${convertFileSrc(photo.file_path)}?t=${imageKey}`
   const fileSizeKB = photo.file_size ? (photo.file_size / 1024).toFixed(2) : 'N/A'
 
   const handleSaveEdited = async (photoId, base64Data, createCopy) => {
     try {
       const updatedPhoto = await photosAPI.saveEdited(photoId, base64Data, createCopy)
       setIsEditing(false)
+      // Force image reload by updating cache buster
+      setImageKey(Date.now())
       if (onPhotoUpdated) {
         onPhotoUpdated(updatedPhoto)
       }

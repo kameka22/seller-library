@@ -240,7 +240,9 @@ export default function PhotoTreeView({ photos, onPhotoClick, selectedItems = []
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {currentFolder.photos.map((photo) => {
               const selected = isPhotoSelected(photo.id)
-              const imageSrc = convertFileSrc(photo.file_path)
+              // Add cache buster to force reload when photo is updated
+              const cacheBuster = photo._cacheKey || Date.parse(photo.created_at)
+              const imageSrc = `${convertFileSrc(photo.file_path)}?t=${cacheBuster}`
 
               return (
                 <div

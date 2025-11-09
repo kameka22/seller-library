@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
 
-export default function Sidebar({ activeTab, onTabChange, updateAvailable, onUpdateClick }) {
+export default function Sidebar({
+  activeTab,
+  onTabChange,
+  updateAvailable,
+  onUpdateClick,
+}) {
   const { t } = useLanguage();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [objectsExpanded, setObjectsExpanded] = useState(true);
@@ -12,7 +17,7 @@ export default function Sidebar({ activeTab, onTabChange, updateAvailable, onUpd
   useEffect(() => {
     // Function to load user name from localStorage
     const loadUserName = () => {
-      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
       setUserName(userInfo.firstName || "User");
     };
 
@@ -20,18 +25,18 @@ export default function Sidebar({ activeTab, onTabChange, updateAvailable, onUpd
     loadUserName();
 
     // Listen for updates
-    window.addEventListener('userInfoUpdated', loadUserName);
+    window.addEventListener("userInfoUpdated", loadUserName);
 
     // Cleanup
     return () => {
-      window.removeEventListener('userInfoUpdated', loadUserName);
+      window.removeEventListener("userInfoUpdated", loadUserName);
     };
   }, []);
 
   const menuItems = [
     {
       id: "objects",
-      label: t('sidebar.objects'),
+      label: t("sidebar.objects"),
       icon: (
         <svg
           className="w-6 h-6"
@@ -48,13 +53,13 @@ export default function Sidebar({ activeTab, onTabChange, updateAvailable, onUpd
         </svg>
       ),
       submenu: [
-        { id: "objects-list", label: t('objects.myObjects') },
-        { id: "objects-categories", label: t('categories.title') },
+        { id: "objects-list", label: t("objects.myObjects") },
+        { id: "objects-categories", label: t("categories.title") },
       ],
     },
     {
       id: "photos",
-      label: t('sidebar.photos'),
+      label: t("sidebar.photos"),
       icon: (
         <svg
           className="w-6 h-6"
@@ -71,13 +76,13 @@ export default function Sidebar({ activeTab, onTabChange, updateAvailable, onUpd
         </svg>
       ),
       submenu: [
-        { id: "photos-import", label: t('photos.import') },
-        { id: "photos-collection", label: t('photos.collection') },
+        { id: "photos-import", label: t("photos.import") },
+        { id: "photos-collection", label: t("photos.collection") },
       ],
     },
     {
       id: "platforms",
-      label: t('sidebar.platforms'),
+      label: t("sidebar.platforms"),
       icon: (
         <svg
           className="w-6 h-6"
@@ -94,8 +99,8 @@ export default function Sidebar({ activeTab, onTabChange, updateAvailable, onUpd
         </svg>
       ),
       submenu: [
-        { id: "platforms-list", label: t('platforms.list') },
-        { id: "platforms-sales", label: t('platforms.sales') },
+        { id: "platforms-list", label: t("platforms.list") },
+        { id: "platforms-sales", label: t("platforms.sales") },
       ],
     },
   ];
@@ -221,16 +226,16 @@ export default function Sidebar({ activeTab, onTabChange, updateAvailable, onUpd
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={onUpdateClick}
-                className={`text-xs truncate hover:underline cursor-pointer ${updateAvailable === false ? 'text-green-400' : 'text-gray-400'}`}
-                title={t('update.clickToCheck')}
+                className={`text-xs truncate hover:underline cursor-pointer ${updateAvailable === false ? "text-green-400" : "text-gray-400"}`}
+                title={t("update.clickToCheck")}
               >
-                {t('common.version')} 0.1.3
+                {t("common.version")} 0.1.4
               </button>
               {updateAvailable && (
                 <button
                   onClick={onUpdateClick}
                   className="flex-shrink-0 w-4 h-4 bg-yellow-500 rounded-sm hover:bg-yellow-600 transition-colors relative group"
-                  title={t('update.title')}
+                  title={t("update.title")}
                 >
                   <svg
                     className="w-3 h-3 text-white absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
@@ -247,7 +252,7 @@ export default function Sidebar({ activeTab, onTabChange, updateAvailable, onUpd
 
         {/* User Block */}
         <button
-          onClick={() => onTabChange('user-settings')}
+          onClick={() => onTabChange("user-settings")}
           className={`w-full p-4 border-t border-gray-800 hover:bg-gray-800 transition-colors flex items-center gap-3 ${isCollapsed ? "justify-center" : ""}`}
         >
           <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
@@ -268,7 +273,9 @@ export default function Sidebar({ activeTab, onTabChange, updateAvailable, onUpd
           {!isCollapsed && (
             <div className="flex-1 min-w-0 text-left">
               <p className="text-sm font-medium truncate">{userName}</p>
-              <p className="text-xs text-gray-400 truncate">{t('user.settings')}</p>
+              <p className="text-xs text-gray-400 truncate">
+                {t("user.settings")}
+              </p>
             </div>
           )}
         </button>

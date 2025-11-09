@@ -5,11 +5,11 @@
   "platforms": {
     "darwin-aarch64": {
       "signature": "",
-      "url": "https://github.com/kameka22/seller-library/releases/download/0.1.4/seller-library_0.1.3_aarch64.app.tar.gz"
+      "url": "https://github.com/kameka22/seller-library/releases/download/0.1.4/seller-library_0.1.4_aarch64.app.tar.gz"
     },
     "darwin-x86_64": {
       "signature": "",
-      "url": "https://github.com/kameka22/seller-library/releases/download/0.1.4/seller-library_0.1.3_x64.app.tar.gz"
+      "url": "https://github.com/kameka22/seller-library/releases/download/0.1.4/seller-library_0.1.4_x64.app.tar.gz"
     }
   }
 }

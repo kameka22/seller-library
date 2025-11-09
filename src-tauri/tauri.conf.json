@@ -1,0 +1,50 @@
+{
+  "build": {
+    "beforeDevCommand": "cd /Users/lcarlini/Devs/seller-library && node start-vite.js",
+    "beforeBuildCommand": "cd /Users/lcarlini/Devs/seller-library && node node_modules/vite/bin/vite.js build",
+    "devPath": "http://localhost:5173",
+    "distDir": "../dist",
+    "withGlobalTauri": false
+  },
+  "package": {
+    "productName": "Seller Library",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "protocol": {
+        "asset": true,
+        "assetScope": ["**"]
+      },
+      "shell": {
+        "all": false,
+        "open": true
+      },
+      "dialog": {
+        "all": true
+      },
+      "fs": {
+        "all": true,
+        "scope": ["**"]
+      }
+    },
+    "bundle": {
+      "active": true,
+      "targets": "all",
+      "identifier": "com.seller-library.app"
+    },
+    "security": {
+      "csp": null
+    },
+    "windows": [
+      {
+        "fullscreen": false,
+        "resizable": true,
+        "title": "Seller Library",
+        "width": 1200,
+        "height": 800
+      }
+    ]
+  }
+}

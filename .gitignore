@@ -1,0 +1,53 @@
+# Node.js & React
+node_modules/
+build/
+dist/
+.env
+
+# Tauri
+/src-tauri/target/
+src-tauri/Cargo.lock
+src-tauri/.DS_Store
+
+# Rust
+/target/
+**/*.rs.bk
+
+# Tailwind CSS
+tailwind.config.js
+tailwind.config.cjs
+postcss.config.js
+postcss.config.cjs
+
+# Logs & system files
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude files
+claude/
+claude/**
+CLAUDE.md
+
+# Misc
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS generated files
+*.exe
+*.dll
+*.so
+
+# Test coverage
+coverage/
+*.lcov
+
+# Output folders
+out/

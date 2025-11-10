@@ -335,7 +335,7 @@ export default function PhotoManager() {
               </div>
               <button
                 onClick={handleDeleteSelected}
-                className="ml-auto text-red-600 hover:text-red-700 font-medium"
+                className="ml-auto bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors font-medium"
               >
                 {t('ui.deleteSelection')}
               </button>

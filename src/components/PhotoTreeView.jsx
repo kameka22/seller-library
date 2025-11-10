@@ -51,6 +51,9 @@ export default function PhotoTreeView({ photos, folders = [], onPhotoClick, sele
   const fileTree = useMemo(() => {
     const tree = { folders: {}, photos: [] }
 
+    console.log('PhotoTreeView: Building tree with', folders.length, 'folders and', photos.length, 'photos')
+    console.log('PhotoTreeView: commonRoot is', commonRoot)
+
     // First, add all folders from file system
     folders.forEach(folder => {
       const pathParts = folder.path.split('/').filter(part => part !== '')
@@ -94,6 +97,7 @@ export default function PhotoTreeView({ photos, folders = [], onPhotoClick, sele
       current.photos.push({ ...photo, fileName })
     })
 
+    console.log('PhotoTreeView: Built tree with', Object.keys(tree.folders).length, 'root folders')
     return tree
   }, [photos, folders, commonRoot])
 

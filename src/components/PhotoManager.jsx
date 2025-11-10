@@ -99,7 +99,9 @@ export default function PhotoManager() {
           }
 
           const rootPath = '/' + rootParts.join('/')
+          console.log('Scanning folder structure from root:', rootPath)
           const folderStructure = await photosAPI.scanFolderStructure(rootPath)
+          console.log('Folder structure loaded:', folderStructure.folders?.length || 0, 'folders')
           setFolders(folderStructure.folders || [])
         } catch (folderErr) {
           console.error('Error loading folder structure:', folderErr)
@@ -582,6 +584,7 @@ export default function PhotoManager() {
         onClose={() => setShowMoveModal(false)}
         onConfirm={confirmMove}
         photos={photos}
+        folders={folders}
         selectedItems={selectedItems}
         onFolderCreated={loadPhotos}
       />

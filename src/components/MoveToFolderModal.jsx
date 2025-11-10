@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { photosAPI } from '../utils/api'
 
-export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, selectedItems, onFolderCreated }) {
+export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, folders = [], selectedItems, onFolderCreated }) {
   const { t } = useLanguage()
   const [currentPath, setCurrentPath] = useState([])
   const [isCreatingFolder, setIsCreatingFolder] = useState(false)
@@ -20,7 +20,7 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
     }
   }, [isOpen])
 
-  // Build folder tree from photos
+  // Build folder tree from photos and file system folders
   const folderTree = useMemo(() => {
     if (!photos || photos.length === 0) return { folders: {}, photos: [], commonRoot: [] }
 
@@ -47,6 +47,29 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
     // Build tree
     const tree = { folders: {}, photos: [], commonRoot }
 
+    // First, add all folders from file system
+    console.log('MoveToFolderModal: Processing', folders.length, 'folders from file system')
+    folders.forEach(folder => {
+      const pathParts = folder.path.split('/').filter(part => part !== '')
+      const relativeParts = pathParts.slice(commonRoot.length)
+
+      if (relativeParts.length === 0) return // Skip root
+
+      let current = tree
+      relativeParts.forEach((part, index) => {
+        if (!current.folders[part]) {
+          current.folders[part] = {
+            folders: {},
+            photos: [],
+            fullPath: [...commonRoot, ...relativeParts.slice(0, index + 1)].join('/'),
+            name: part
+          }
+        }
+        current = current.folders[part]
+      })
+    })
+
+    // Then, add photos to their respective folders
     photos.forEach(photo => {
       const pathParts = photo.original_path.split('/').filter(part => part !== '')
       const fileName = pathParts.pop()
@@ -68,7 +91,7 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
       current.photos.push({ ...photo, fileName })
     })
 
-    // Add manually created folders to the tree
+    // Finally, add manually created folders from this session
     createdFolders.forEach(folderPath => {
       const pathParts = folderPath.split('/').filter(part => part !== '')
       const relativeParts = pathParts.slice(commonRoot.length)
@@ -87,8 +110,9 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
       })
     })
 
+    console.log('MoveToFolderModal: Built tree with', Object.keys(tree.folders).length, 'root folders')
     return tree
-  }, [photos, createdFolders])
+  }, [photos, folders, createdFolders])
 
   // Navigate to current folder
   const getCurrentFolder = () => {

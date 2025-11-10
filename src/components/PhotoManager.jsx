@@ -261,6 +261,21 @@ export default function PhotoManager() {
     }
   }
 
+  const handleEditPhoto = (photo) => {
+    setSelectedPhoto(photo)
+  }
+
+  const handleDeleteItems = (itemIds) => {
+    if (itemIds.length === 0) return
+
+    const folders = itemIds.filter(id => id.startsWith('folder-'))
+    const photoIds = itemIds.filter(id => id.startsWith('photo-'))
+
+    setDeleteInfo({ folders: folders.length, photos: photoIds.length })
+    setSelectedItems(itemIds)
+    setShowDeleteModal(true)
+  }
+
   const filteredPhotos = photos.filter(photo =>
     photo.file_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (photo.original_path && photo.original_path.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -345,6 +360,8 @@ export default function PhotoManager() {
           currentPath={currentPath}
           onPathChange={setCurrentPath}
           onSelectAll={handleSelectAll}
+          onEditPhoto={handleEditPhoto}
+          onDeleteItems={handleDeleteItems}
         />
       </div>
 

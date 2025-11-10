@@ -12,6 +12,7 @@ export default function PhotoManager() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedPhoto, setSelectedPhoto] = useState(null)
+  const [editingPhoto, setEditingPhoto] = useState(null)
   const [selectedItems, setSelectedItems] = useState([]) // Can be 'photo-{id}' or 'folder-{path}'
   const [scanning, setScanning] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -262,7 +263,7 @@ export default function PhotoManager() {
   }
 
   const handleEditPhoto = (photo) => {
-    setSelectedPhoto(photo)
+    setEditingPhoto(photo)
   }
 
   const handleDeleteItems = (itemIds) => {
@@ -387,6 +388,33 @@ export default function PhotoManager() {
               setPhotos([photoWithCacheBuster, ...photos])
             }
             setSelectedPhoto(photoWithCacheBuster)
+          }}
+        />
+      )}
+
+      {/* Photo Edit Modal (Direct from context menu) */}
+      {editingPhoto && (
+        <PhotoDetail
+          photo={editingPhoto}
+          onClose={() => setEditingPhoto(null)}
+          initialEditMode={true}
+          onPhotoUpdated={(updatedPhoto) => {
+            // Add cache buster to force image reload
+            const photoWithCacheBuster = {
+              ...updatedPhoto,
+              _cacheKey: Date.now()
+            }
+
+            // Check if it's the same photo (updated) or a new copy
+            const existingPhoto = photos.find(p => p.id === updatedPhoto.id)
+            if (existingPhoto) {
+              // Update existing photo
+              setPhotos(photos.map(p => p.id === updatedPhoto.id ? photoWithCacheBuster : p))
+            } else {
+              // Add new photo (copy)
+              setPhotos([photoWithCacheBuster, ...photos])
+            }
+            setEditingPhoto(null)
           }}
         />
       )}

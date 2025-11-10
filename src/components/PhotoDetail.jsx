@@ -4,9 +4,9 @@ import { photosAPI } from '../utils/api'
 import PhotoEditor from './PhotoEditor'
 import { useLanguage } from '../contexts/LanguageContext'
 
-export default function PhotoDetail({ photo, onClose, onPhotoUpdated }) {
+export default function PhotoDetail({ photo, onClose, onPhotoUpdated, initialEditMode = false }) {
   const { t } = useLanguage()
-  const [isEditing, setIsEditing] = useState(false)
+  const [isEditing, setIsEditing] = useState(initialEditMode)
   const [imageKey, setImageKey] = useState(Date.now())
 
   if (!photo) return null

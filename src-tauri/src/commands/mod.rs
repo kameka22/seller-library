@@ -1118,3 +1118,148 @@ pub async fn import_photos(
         errors,
     })
 }
+
+// ========== MOVE PHOTOS AND FOLDERS COMMAND ==========
+
+#[derive(Deserialize)]
+pub struct MoveItemsRequest {
+    pub photo_ids: Vec<i64>,
+    pub folder_paths: Vec<String>,
+    pub destination_path: String,
+}
+
+#[derive(Serialize)]
+pub struct MoveItemsResult {
+    pub moved: i32,
+    pub errors: Vec<String>,
+}
+
+#[tauri::command]
+pub async fn move_photos_and_folders(
+    pool: State<'_, SqlitePool>,
+    request: MoveItemsRequest,
+) -> Result<MoveItemsResult, String> {
+    let dest_path = Path::new(&request.destination_path);
+
+    if !dest_path.exists() {
+        fs::create_dir_all(dest_path)
+            .map_err(|e| format!("Failed to create destination directory: {}", e))?;
+    }
+
+    let mut moved_count = 0;
+    let mut errors = Vec::new();
+
+    // Move individual photos
+    for photo_id in request.photo_ids {
+        let photo = sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE id = ?")
+            .bind(photo_id)
+            .fetch_optional(pool.inner())
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if let Some(photo) = photo {
+            let source_path = Path::new(&photo.file_path);
+
+            if !source_path.exists() {
+                errors.push(format!("Source file not found: {}", photo.file_path));
+                continue;
+            }
+
+            let file_name = source_path.file_name().unwrap().to_string_lossy().to_string();
+            let mut dest_file = dest_path.join(&file_name);
+
+            // Handle duplicates
+            let mut copy_number = 1;
+            while dest_file.exists() {
+                let stem = source_path.file_stem().ok_or("Invalid file name").map_err(|e| e.to_string())?;
+                let extension = source_path.extension().map(|e| e.to_string_lossy()).unwrap_or_default();
+                let new_name = if extension.is_empty() {
+                    format!("{} ({})", stem.to_string_lossy(), copy_number)
+                } else {
+                    format!("{} ({}).{}", stem.to_string_lossy(), copy_number, extension)
+                };
+                dest_file = dest_path.join(&new_name);
+                copy_number += 1;
+            }
+
+            // Move the file
+            match fs::rename(source_path, &dest_file) {
+                Ok(_) => {
+                    // Update database with new paths
+                    let new_file_path = dest_file.to_string_lossy().to_string();
+                    match sqlx::query(
+                        "UPDATE photos SET file_path = ?, original_path = ? WHERE id = ?"
+                    )
+                    .bind(&new_file_path)
+                    .bind(&new_file_path)
+                    .bind(photo_id)
+                    .execute(pool.inner())
+                    .await {
+                        Ok(_) => moved_count += 1,
+                        Err(e) => errors.push(format!("Failed to update database for photo {}: {}", photo_id, e)),
+                    }
+                }
+                Err(e) => errors.push(format!("Failed to move file {}: {}", photo.file_path, e)),
+            }
+        } else {
+            errors.push(format!("Photo {} not found", photo_id));
+        }
+    }
+
+    // Move folders
+    for folder_path in request.folder_paths {
+        let source_folder = Path::new(&folder_path);
+
+        if !source_folder.exists() {
+            errors.push(format!("Source folder not found: {}", folder_path));
+            continue;
+        }
+
+        let folder_name = source_folder.file_name().unwrap().to_string_lossy().to_string();
+        let mut dest_folder = dest_path.join(&folder_name);
+
+        // Handle duplicates
+        let mut copy_number = 1;
+        while dest_folder.exists() {
+            let new_name = format!("{} ({})", folder_name, copy_number);
+            dest_folder = dest_path.join(&new_name);
+            copy_number += 1;
+        }
+
+        // Get all photos in this folder before moving
+        let photos_in_folder = sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE file_path LIKE ?")
+            .bind(format!("{}%", folder_path))
+            .fetch_all(pool.inner())
+            .await
+            .map_err(|e| e.to_string())?;
+
+        // Move the entire folder
+        match fs::rename(source_folder, &dest_folder) {
+            Ok(_) => {
+                // Update all photos in this folder
+                for photo in photos_in_folder {
+                    let old_path = photo.file_path.clone();
+                    let new_path = old_path.replace(&folder_path, &dest_folder.to_string_lossy().to_string());
+
+                    match sqlx::query(
+                        "UPDATE photos SET file_path = ?, original_path = ? WHERE id = ?"
+                    )
+                    .bind(&new_path)
+                    .bind(&new_path)
+                    .bind(photo.id)
+                    .execute(pool.inner())
+                    .await {
+                        Ok(_) => moved_count += 1,
+                        Err(e) => errors.push(format!("Failed to update database for photo in folder: {}", e)),
+                    }
+                }
+            }
+            Err(e) => errors.push(format!("Failed to move folder {}: {}", folder_path, e)),
+        }
+    }
+
+    Ok(MoveItemsResult {
+        moved: moved_count,
+        errors,
+    })
+}

@@ -81,6 +81,17 @@ export const photosAPI = {
   saveEdited: async (photoId, base64Data, createCopy = false) => {
     return await invoke('save_edited_photo', { photoId, request: { base64_data: base64Data, create_copy: createCopy } })
   },
+
+  // Déplacer des photos et dossiers vers un nouveau répertoire
+  moveItems: async (photoIds, folderPaths, destinationPath) => {
+    return await invoke('move_photos_and_folders', {
+      request: {
+        photo_ids: photoIds,
+        folder_paths: folderPaths,
+        destination_path: destinationPath
+      }
+    })
+  },
 }
 
 // ========== PLATFORMS API ==========

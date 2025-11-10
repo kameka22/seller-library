@@ -4,6 +4,7 @@ import { open } from '@tauri-apps/api/dialog'
 import PhotoTreeView from './PhotoTreeView'
 import PhotoDetail from './PhotoDetail'
 import ConfirmModal from './ConfirmModal'
+import MoveToFolderModal from './MoveToFolderModal'
 import { useLanguage } from '../contexts/LanguageContext'
 
 export default function PhotoManager() {
@@ -18,6 +19,7 @@ export default function PhotoManager() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showRefreshModal, setShowRefreshModal] = useState(false)
+  const [showMoveModal, setShowMoveModal] = useState(false)
   const [deleteInfo, setDeleteInfo] = useState({ folders: 0, photos: 0 })
   const [deletePhysicalFiles, setDeletePhysicalFiles] = useState(true)
   const [currentPath, setCurrentPath] = useState([])
@@ -277,6 +279,35 @@ export default function PhotoManager() {
     setShowDeleteModal(true)
   }
 
+  const handleMoveSelected = () => {
+    if (selectedItems.length === 0) return
+    setShowMoveModal(true)
+  }
+
+  const confirmMove = async (destinationPath) => {
+    const folders = selectedItems
+      .filter(id => id.startsWith('folder-'))
+      .map(id => id.replace('folder-', ''))
+
+    const photoIds = selectedItems
+      .filter(id => id.startsWith('photo-'))
+      .map(id => parseInt(id.replace('photo-', '')))
+
+    try {
+      setScanning(true)
+      await photosAPI.moveItems(photoIds, folders, destinationPath)
+      await loadPhotos()
+      setSelectedItems([])
+      setShowMoveModal(false)
+      setError(null)
+    } catch (err) {
+      console.error('Error moving items:', err)
+      setError(t('ui.moveError'))
+    } finally {
+      setScanning(false)
+    }
+  }
+
   const filteredPhotos = photos.filter(photo =>
     photo.file_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (photo.original_path && photo.original_path.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -333,12 +364,20 @@ export default function PhotoManager() {
                 <span className="text-gray-500">{t('ui.selected')}</span>
                 <span className="ml-2 font-semibold text-blue-600">{selectedItems.length} {t('ui.items')}</span>
               </div>
-              <button
-                onClick={handleDeleteSelected}
-                className="ml-auto bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors font-medium"
-              >
-                {t('ui.deleteSelection')}
-              </button>
+              <div className="ml-auto flex gap-2">
+                <button
+                  onClick={handleMoveSelected}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium"
+                >
+                  {t('ui.moveSelection')}
+                </button>
+                <button
+                  onClick={handleDeleteSelected}
+                  className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors font-medium"
+                >
+                  {t('ui.deleteSelection')}
+                </button>
+              </div>
             </>
           )}
         </div>
@@ -471,6 +510,15 @@ export default function PhotoManager() {
         confirmText={t('ui.rescan')}
         cancelText={t('common.cancel')}
         danger={false}
+      />
+
+      {/* Move To Folder Modal */}
+      <MoveToFolderModal
+        isOpen={showMoveModal}
+        onClose={() => setShowMoveModal(false)}
+        onConfirm={confirmMove}
+        photos={photos}
+        selectedItems={selectedItems}
       />
     </div>
   )

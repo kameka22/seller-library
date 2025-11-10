@@ -48,6 +48,7 @@ async fn main() {
             commands::list_volumes,
             commands::scan_volume_for_photos,
             commands::import_photos,
+            commands::move_photos_and_folders,
             updater::check_for_updates,
             updater::download_and_install_update,
         ])

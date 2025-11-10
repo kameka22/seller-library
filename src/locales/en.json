@@ -341,6 +341,18 @@
     "photosLowercase": "photos",
     "photoImported": "photo(s) imported",
     "errorEncountered": "error(s) encountered",
-    "photoAdded": "photo(s) added"
+    "photoAdded": "photo(s) added",
+    "moveItems": "Move items",
+    "selectDestination": "Select destination folder",
+    "currentFolder": "Current folder",
+    "select": "Select",
+    "noSubfolders": "No subfolders",
+    "createNewFolder": "Create new folder",
+    "destination": "Destination",
+    "moveHere": "Move here",
+    "moveSelection": "Move selection",
+    "movingItems": "Moving items...",
+    "moveSuccess": "Move successful",
+    "moveError": "Error moving items"
   }
 }

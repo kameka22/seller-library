@@ -49,8 +49,9 @@ async fn main() {
             commands::scan_volume_for_photos,
             commands::import_photos,
             commands::move_photos_and_folders,
+            commands::list_folders,
             commands::create_folder,
-            commands::scan_folder_structure,
+            commands::delete_folder_from_db,
             updater::check_for_updates,
             updater::download_and_install_update,
         ])

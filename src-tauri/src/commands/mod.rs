@@ -1,4 +1,4 @@
-use crate::models::{Object, CreateObject, UpdateObject, Photo, Platform, CreatePlatform, UpdatePlatform, ObjectPhoto, ObjectPlatform, Category, CreateCategory};
+use crate::models::{Object, CreateObject, UpdateObject, Photo, Platform, CreatePlatform, UpdatePlatform, ObjectPhoto, ObjectPlatform, Category, CreateCategory, Folder, CreateFolder as CreateFolderModel};
 use sqlx::SqlitePool;
 use tauri::State;
 use serde::{Deserialize, Serialize};
@@ -197,9 +197,20 @@ async fn import_photo(pool: &SqlitePool, path: &Path) -> Result<(), Box<dyn std:
         (None, None)
     };
 
+    // Get parent folder path
+    let folder_path = if let Some(parent) = path.parent() {
+        parent.to_string_lossy().to_string()
+    } else {
+        return Err("Could not determine parent folder".into());
+    };
+
+    // Ensure folder exists in database
+    let folder_id = ensure_folder_in_db(pool, &folder_path).await
+        .map_err(|e| format!("Failed to ensure folder in DB: {}", e))?;
+
     sqlx::query(
-        "INSERT OR IGNORE INTO photos (file_path, original_path, file_name, file_size, width, height)
-         VALUES (?, ?, ?, ?, ?, ?)"
+        "INSERT OR IGNORE INTO photos (file_path, original_path, file_name, file_size, width, height, folder_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(&file_path)
     .bind(&file_path)
@@ -207,6 +218,7 @@ async fn import_photo(pool: &SqlitePool, path: &Path) -> Result<(), Box<dyn std:
     .bind(file_size)
     .bind(width)
     .bind(height)
+    .bind(folder_id)
     .execute(pool)
     .await?;
 
@@ -1264,6 +1276,16 @@ pub async fn move_photos_and_folders(
     })
 }
 
+// ========== FOLDERS COMMANDS ==========
+
+#[tauri::command]
+pub async fn list_folders(pool: State<'_, SqlitePool>) -> Result<Vec<Folder>, String> {
+    sqlx::query_as::<_, Folder>("SELECT * FROM folders ORDER BY path")
+        .fetch_all(pool.inner())
+        .await
+        .map_err(|e| e.to_string())
+}
+
 #[derive(Deserialize)]
 pub struct CreateFolderRequest {
     pub folder_path: String,
@@ -1271,81 +1293,88 @@ pub struct CreateFolderRequest {
 
 #[tauri::command]
 pub async fn create_folder(
+    pool: State<'_, SqlitePool>,
     request: CreateFolderRequest,
-) -> Result<String, String> {
+) -> Result<Folder, String> {
     let folder_path = Path::new(&request.folder_path);
 
+    // Create the folder physically on the filesystem
     fs::create_dir_all(folder_path)
         .map_err(|e| format!("Failed to create folder: {}", e))?;
 
-    Ok(request.folder_path)
-}
+    // Extract folder name from path
+    let folder_name = folder_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_string();
 
-#[derive(Deserialize)]
-pub struct ScanFolderStructureRequest {
-    pub root_path: String,
-}
+    // Insert into database
+    let result = sqlx::query(
+        "INSERT INTO folders (path, name, parent_id) VALUES (?, ?, NULL)"
+    )
+    .bind(&request.folder_path)
+    .bind(&folder_name)
+    .execute(pool.inner())
+    .await
+    .map_err(|e| e.to_string())?;
 
-#[derive(Serialize)]
-pub struct FolderInfo {
-    pub path: String,
-    pub name: String,
-    pub has_subfolders: bool,
-}
+    let id = result.last_insert_rowid();
 
-#[derive(Serialize)]
-pub struct ScanFolderStructureResult {
-    pub folders: Vec<FolderInfo>,
-}
-
-fn scan_folders_recursive(root: &Path, base: &Path) -> Result<Vec<FolderInfo>, String> {
-    let mut folders = Vec::new();
-
-    if !root.exists() || !root.is_dir() {
-        return Ok(folders);
-    }
-
-    let entries = fs::read_dir(root)
-        .map_err(|e| format!("Failed to read directory {}: {}", root.display(), e))?;
-
-    for entry in entries {
-        if let Ok(entry) = entry {
-            let path = entry.path();
-            if path.is_dir() {
-                // Check if this folder has subfolders
-                let has_subfolders = fs::read_dir(&path)
-                    .map(|entries| entries.filter_map(|e| e.ok()).any(|e| e.path().is_dir()))
-                    .unwrap_or(false);
-
-                let relative_path = path.strip_prefix(base)
-                    .map_err(|e| format!("Failed to get relative path: {}", e))?;
-
-                folders.push(FolderInfo {
-                    path: format!("/{}", relative_path.to_string_lossy().replace("\\", "/")),
-                    name: path.file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("")
-                        .to_string(),
-                    has_subfolders,
-                });
-
-                // Recursively scan subfolders
-                let subfolders = scan_folders_recursive(&path, base)?;
-                folders.extend(subfolders);
-            }
-        }
-    }
-
-    Ok(folders)
+    // Return the created folder
+    sqlx::query_as::<_, Folder>("SELECT * FROM folders WHERE id = ?")
+        .bind(id)
+        .fetch_one(pool.inner())
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn scan_folder_structure(
-    request: ScanFolderStructureRequest,
-) -> Result<ScanFolderStructureResult, String> {
-    let root_path = Path::new(&request.root_path);
+pub async fn delete_folder_from_db(
+    pool: State<'_, SqlitePool>,
+    folder_id: i64,
+) -> Result<(), String> {
+    sqlx::query("DELETE FROM folders WHERE id = ?")
+        .bind(folder_id)
+        .execute(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
 
-    let folders = scan_folders_recursive(root_path, root_path)?;
+    Ok(())
+}
 
-    Ok(ScanFolderStructureResult { folders })
+// Helper function to ensure a folder exists in the database
+async fn ensure_folder_in_db(pool: &SqlitePool, folder_path: &str) -> Result<i64, String> {
+    // Check if folder already exists
+    let existing: Option<Folder> = sqlx::query_as::<_, Folder>(
+        "SELECT * FROM folders WHERE path = ?"
+    )
+    .bind(folder_path)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    if let Some(folder) = existing {
+        return Ok(folder.id);
+    }
+
+    // Extract folder name from path
+    let path_obj = Path::new(folder_path);
+    let folder_name = path_obj
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_string();
+
+    // Insert new folder
+    let result = sqlx::query(
+        "INSERT INTO folders (path, name, parent_id) VALUES (?, ?, NULL)"
+    )
+    .bind(folder_path)
+    .bind(&folder_name)
+    .execute(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    Ok(result.last_insert_rowid())
 }

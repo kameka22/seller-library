@@ -51,12 +51,15 @@ export default function PhotoTreeView({ photos, folders = [], onPhotoClick, sele
   const fileTree = useMemo(() => {
     const tree = { folders: {}, photos: [] }
 
-    // First, add all folders from file system
-    // Note: folders from backend are already relative to the root
+    // First, add all folders from database
+    // Folders now have absolute paths from DB, we need to make them relative to commonRoot
     folders.forEach(folder => {
-      const relativeParts = folder.path.split('/').filter(part => part !== '')
+      const absoluteParts = folder.path.split('/').filter(part => part !== '')
 
-      if (relativeParts.length === 0) return // Skip root
+      // Make path relative to commonRoot
+      const relativeParts = absoluteParts.slice(commonRoot.length)
+
+      if (relativeParts.length === 0) return // Skip root or folders outside commonRoot
 
       let current = tree
       relativeParts.forEach((part, index) => {

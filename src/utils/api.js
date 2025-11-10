@@ -102,13 +102,14 @@ export const photosAPI = {
     })
   },
 
-  // Scanner la structure des dossiers
-  scanFolderStructure: async (rootPath) => {
-    return await invoke('scan_folder_structure', {
-      request: {
-        root_path: rootPath
-      }
-    })
+  // Lister tous les dossiers depuis la base de données
+  listFolders: async () => {
+    return await invoke('list_folders')
+  },
+
+  // Supprimer un dossier de la base de données
+  deleteFolderFromDb: async (folderId) => {
+    return await invoke('delete_folder_from_db', { folderId })
   },
 }
 

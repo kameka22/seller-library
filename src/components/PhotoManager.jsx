@@ -69,47 +69,15 @@ export default function PhotoManager() {
   const loadPhotos = async () => {
     try {
       setLoading(true)
-      const data = await photosAPI.list()
-      setPhotos(data)
 
-      // Load folder structure if we have photos
-      if (data && data.length > 0) {
-        try {
-          // Get the common root from photos to scan
-          const paths = data.map(p => p.original_path.split('/').filter(part => part !== ''))
-          let rootParts = paths[0]
+      // Load photos and folders from database
+      const [photosData, foldersData] = await Promise.all([
+        photosAPI.list(),
+        photosAPI.listFolders()
+      ])
 
-          if (paths.length === 1) {
-            rootParts = [...paths[0]]
-            rootParts.pop() // Remove filename
-          } else {
-            for (let i = 1; i < paths.length; i++) {
-              const currentPathArr = paths[i]
-              const newCommon = []
-              for (let j = 0; j < Math.min(rootParts.length, currentPathArr.length - 1); j++) {
-                if (rootParts[j] === currentPathArr[j]) {
-                  newCommon.push(rootParts[j])
-                } else {
-                  break
-                }
-              }
-              rootParts = newCommon
-              if (rootParts.length === 0) break
-            }
-          }
-
-          const rootPath = '/' + rootParts.join('/')
-          const folderStructure = await photosAPI.scanFolderStructure(rootPath)
-          setFolders(folderStructure.folders || [])
-        } catch (folderErr) {
-          console.error('Error loading folder structure:', folderErr)
-          // Don't show error, just continue without folder structure
-          setFolders([])
-        }
-      } else {
-        setFolders([])
-      }
-
+      setPhotos(photosData)
+      setFolders(foldersData || [])
       setError(null)
     } catch (err) {
       console.error('Error loading photos:', err)

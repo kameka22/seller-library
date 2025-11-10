@@ -113,3 +113,19 @@ pub struct ObjectPlatform {
     pub created_at: String,
     pub updated_at: String,
 }
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct Folder {
+    pub id: i64,
+    pub path: String,
+    pub name: String,
+    pub parent_id: Option<i64>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateFolder {
+    pub path: String,
+    pub name: String,
+    pub parent_id: Option<i64>,
+}

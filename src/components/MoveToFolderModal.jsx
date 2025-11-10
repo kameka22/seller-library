@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { photosAPI } from '../utils/api'
 
@@ -8,10 +8,21 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
   const [isCreatingFolder, setIsCreatingFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
   const [selectedDestination, setSelectedDestination] = useState(null)
+  const [createdFolders, setCreatedFolders] = useState([]) // Track newly created folders
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setCurrentPath([])
+      setCreatedFolders([])
+      setIsCreatingFolder(false)
+      setNewFolderName('')
+    }
+  }, [isOpen])
 
   // Build folder tree from photos
   const folderTree = useMemo(() => {
-    if (!photos || photos.length === 0) return { folders: {}, photos: [] }
+    if (!photos || photos.length === 0) return { folders: {}, photos: [], commonRoot: [] }
 
     // Find common root
     const paths = photos.map(p => p.original_path.split('/').filter(part => part !== ''))
@@ -57,8 +68,27 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
       current.photos.push({ ...photo, fileName })
     })
 
+    // Add manually created folders to the tree
+    createdFolders.forEach(folderPath => {
+      const pathParts = folderPath.split('/').filter(part => part !== '')
+      const relativeParts = pathParts.slice(commonRoot.length)
+
+      let current = tree
+      relativeParts.forEach((part, index) => {
+        if (!current.folders[part]) {
+          current.folders[part] = {
+            folders: {},
+            photos: [],
+            fullPath: [...commonRoot, ...relativeParts.slice(0, index + 1)].join('/'),
+            name: part
+          }
+        }
+        current = current.folders[part]
+      })
+    })
+
     return tree
-  }, [photos])
+  }, [photos, createdFolders])
 
   // Navigate to current folder
   const getCurrentFolder = () => {
@@ -92,6 +122,9 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
 
       // Create folder on file system immediately
       await photosAPI.createFolder('/' + fullPath)
+
+      // Add to created folders list to make it visible in the tree
+      setCreatedFolders([...createdFolders, fullPath])
 
       // Notify parent to reload photos
       if (onFolderCreated) {

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
+import { photosAPI } from '../utils/api'
 
 export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, selectedItems }) {
   const { t } = useLanguage()
@@ -82,13 +83,24 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
   const folderEntries = Object.entries(currentFolder.folders || {})
 
   // Handle folder creation
-  const handleCreateFolder = () => {
+  const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return
 
-    // Navigate to the new folder after creation
-    setCurrentPath([...currentPath, newFolderName])
-    setIsCreatingFolder(false)
-    setNewFolderName('')
+    try {
+      // Build the full path for the new folder
+      const fullPath = [...folderTree.commonRoot, ...currentPath, newFolderName].join('/')
+
+      // Create folder on file system immediately
+      await photosAPI.createFolder('/' + fullPath)
+
+      // Navigate to the new folder after creation
+      setCurrentPath([...currentPath, newFolderName])
+      setIsCreatingFolder(false)
+      setNewFolderName('')
+    } catch (err) {
+      console.error('Error creating folder:', err)
+      alert(t('ui.moveError') + ': ' + (err.message || err))
+    }
   }
 
   const handleNavigateToFolder = (folderName) => {

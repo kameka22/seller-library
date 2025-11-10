@@ -301,14 +301,30 @@ export default function PhotoManager() {
 
     try {
       setScanning(true)
-      await photosAPI.moveItems(photoIds, folders, destinationPath)
-      await loadPhotos()
-      setSelectedItems([])
-      setShowMoveModal(false)
       setError(null)
+
+      const result = await photosAPI.moveItems(photoIds, folders, destinationPath)
+      console.log('Move result:', result)
+
+      // Close modal first
+      setShowMoveModal(false)
+
+      // Reload photos
+      await loadPhotos()
+
+      // Reset current path to show root (where user can see the changes)
+      setCurrentPath([])
+
+      // Clear selection
+      setSelectedItems([])
+
+      // Show success message if there were errors
+      if (result.errors && result.errors.length > 0) {
+        setError(`${t('ui.moveSuccess')} - ${result.moved} ${t('ui.items')}. ${result.errors.length} ${t('ui.errorEncountered')}`)
+      }
     } catch (err) {
       console.error('Error moving items:', err)
-      setError(t('ui.moveError'))
+      setError(t('ui.moveError') + ': ' + (err.message || err))
     } finally {
       setScanning(false)
     }

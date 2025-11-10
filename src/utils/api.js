@@ -92,6 +92,15 @@ export const photosAPI = {
       }
     })
   },
+
+  // Créer un nouveau dossier
+  createFolder: async (folderPath) => {
+    return await invoke('create_folder', {
+      request: {
+        folder_path: folderPath
+      }
+    })
+  },
 }
 
 // ========== PLATFORMS API ==========

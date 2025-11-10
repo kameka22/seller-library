@@ -1263,3 +1263,20 @@ pub async fn move_photos_and_folders(
         errors,
     })
 }
+
+#[derive(Deserialize)]
+pub struct CreateFolderRequest {
+    pub folder_path: String,
+}
+
+#[tauri::command]
+pub async fn create_folder(
+    request: CreateFolderRequest,
+) -> Result<String, String> {
+    let folder_path = Path::new(&request.folder_path);
+
+    fs::create_dir_all(folder_path)
+        .map_err(|e| format!("Failed to create folder: {}", e))?;
+
+    Ok(request.folder_path)
+}

@@ -5,8 +5,10 @@ import PlatformDetail from './PlatformDetail'
 import CreatePlatformForm from './CreatePlatformForm'
 import SlidePanel from './SlidePanel'
 import ConfirmModal from './ConfirmModal'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function PlatformList() {
+  const { t } = useLanguage()
   const [platforms, setPlatforms] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -28,7 +30,7 @@ export default function PlatformList() {
       setError(null)
     } catch (err) {
       console.error('Error loading platforms:', err)
-      setError('Erreur lors du chargement des plateformes')
+      setError(t('errors.loadingPlatforms'))
     } finally {
       setLoading(false)
     }
@@ -93,7 +95,7 @@ export default function PlatformList() {
       <div className="flex gap-4 items-center">
         <input
           type="text"
-          placeholder="Rechercher une plateforme..."
+          placeholder={t('placeholders.platformSearch')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -102,7 +104,7 @@ export default function PlatformList() {
           onClick={() => setShowCreatePanel(true)}
           className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap"
         >
-          + Nouvelle plateforme
+          + {t('ui.newPlatform')}
         </button>
       </div>
 
@@ -110,8 +112,8 @@ export default function PlatformList() {
       {filteredPlatforms.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           {searchQuery
-            ? 'Aucune plateforme trouvée'
-            : 'Aucune plateforme. Créez-en une pour commencer !'}
+            ? t('ui.noPlatformFound')
+            : t('ui.noPlatformCreate')}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -129,7 +131,7 @@ export default function PlatformList() {
       <SlidePanel
         isOpen={showCreatePanel}
         onClose={() => setShowCreatePanel(false)}
-        title="Nouvelle plateforme"
+        title={t('ui.newPlatform')}
       >
         <CreatePlatformForm
           onSuccess={handleCreate}
@@ -161,9 +163,9 @@ export default function PlatformList() {
           setPlatformToDelete(null)
         }}
         onConfirm={handleDelete}
-        title="Supprimer la plateforme"
-        message={`Êtes-vous sûr de vouloir supprimer la plateforme "${platformToDelete?.name}" ? Cette action est irréversible.`}
-        confirmText="Supprimer"
+        title={t('ui.deletePlatform')}
+        message={`${t('platforms.deleteConfirm')} "${platformToDelete?.name}" ? ${t('platforms.deleteMessage')}`}
+        confirmText={t('common.delete')}
         confirmStyle="danger"
       />
     </div>

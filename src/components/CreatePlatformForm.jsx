@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function CreatePlatformForm({ onSuccess, onCancel }) {
+  const { t } = useLanguage()
   const [formData, setFormData] = useState({
     name: '',
     base_url: '',
@@ -28,7 +30,7 @@ export default function CreatePlatformForm({ onSuccess, onCancel }) {
       onSuccess(platform)
     } catch (error) {
       console.error('Error creating platform:', error)
-      alert('Erreur lors de la création de la plateforme')
+      alert(t('errors.creatingPlatform'))
     } finally {
       setLoading(false)
     }
@@ -38,34 +40,34 @@ export default function CreatePlatformForm({ onSuccess, onCancel }) {
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Nom de la plateforme *
+          {t('platforms.platformName')} *
         </label>
         <input
           type="text"
           required
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="ex: eBay France"
+          placeholder={t('placeholders.platformName')}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          URL de base
+          {t('platforms.baseUrl')}
         </label>
         <input
           type="url"
           value={formData.base_url}
           onChange={(e) => setFormData({ ...formData, base_url: e.target.value })}
-          placeholder="https://www.ebay.fr"
+          placeholder={t('placeholders.platformUrl')}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Environnement
+          {t('platforms.environment')}
         </label>
         <div className="relative">
           <select
@@ -74,8 +76,8 @@ export default function CreatePlatformForm({ onSuccess, onCancel }) {
             className="w-full px-4 py-2.5 pr-10 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer text-gray-700 font-medium shadow-sm hover:border-gray-400 transition-colors"
             style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}
           >
-            <option value="production">Production</option>
-            <option value="sandbox">Sandbox (Test)</option>
+            <option value="production">{t('platforms.production')}</option>
+            <option value="sandbox">{t('platforms.sandbox')}</option>
           </select>
           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
             <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -86,7 +88,7 @@ export default function CreatePlatformForm({ onSuccess, onCancel }) {
       </div>
 
       <div className="border-t pt-4">
-        <h3 className="text-sm font-medium text-gray-900 mb-3">Configuration API eBay</h3>
+        <h3 className="text-sm font-medium text-gray-900 mb-3">{t('platforms.apiConfig')}</h3>
 
         <div className="space-y-4">
           <div>

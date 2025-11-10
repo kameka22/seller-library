@@ -203,9 +203,9 @@ export default function PhotoImport() {
         {currentStep === 1 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('photoImport.selectDestination')}</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('photoImport.device')}</h2>
               <p className="text-gray-600">
-                Sélectionnez un périphérique externe (clé USB, carte SD, disque dur) contenant les photos à importer.
+                {t('photoImport.deviceDescription')}
               </p>
             </div>
 
@@ -217,9 +217,9 @@ export default function PhotoImport() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-green-900 mb-2">Import réussi !</h3>
+                    <h3 className="text-lg font-semibold text-green-900 mb-2">{t('photoImport.successImport')}</h3>
                     <p className="text-green-800">
-                      <strong>{importedCount}</strong> photo{importedCount > 1 ? 's' : ''} importée{importedCount > 1 ? 's' : ''} avec succès.
+                      <strong>{importedCount}</strong> {t('photoImport.photosImported')}.
                     </p>
                   </div>
                 </div>
@@ -229,13 +229,13 @@ export default function PhotoImport() {
             {/* Error Log (after import) */}
             {importLog.length > 0 && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <h4 className="font-medium text-red-900 mb-2">Erreurs rencontrées :</h4>
+                <h4 className="font-medium text-red-900 mb-2">{t('photoImport.errorsEncountered')}</h4>
                 <ul className="list-disc list-inside text-sm text-red-800 space-y-1">
                   {importLog.slice(0, 5).map((error, index) => (
                     <li key={index}>{error}</li>
                   ))}
                   {importLog.length > 5 && (
-                    <li>... et {importLog.length - 5} autre(s) erreur(s)</li>
+                    <li>{t('photoImport.moreErrors', { count: importLog.length - 5 })}</li>
                   )}
                 </ul>
               </div>
@@ -244,7 +244,7 @@ export default function PhotoImport() {
             {/* Volumes List */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Appareils détectés</h3>
+                <h3 className="text-lg font-medium text-gray-900">{t('ui.detectedDevices')}</h3>
                 <button
                   onClick={loadVolumes}
                   className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1"
@@ -252,7 +252,7 @@ export default function PhotoImport() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  Actualiser
+                  {t('common.refresh')}
                 </button>
               </div>
 
@@ -261,8 +261,8 @@ export default function PhotoImport() {
                   <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                   </svg>
-                  <p className="text-gray-500">Aucun appareil externe détecté</p>
-                  <p className="text-sm text-gray-400 mt-1">Connectez une clé USB, carte SD ou disque dur</p>
+                  <p className="text-gray-500">{t('ui.noDeviceDetected')}</p>
+                  <p className="text-sm text-gray-400 mt-1">{t('ui.connectDevice')}</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -297,7 +297,7 @@ export default function PhotoImport() {
             {isScanning && (
               <div className="flex items-center justify-center gap-3 py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <span className="text-gray-600">Scan en cours...</span>
+                <span className="text-gray-600">{t('ui.scanningInProgress')}</span>
               </div>
             )}
 
@@ -306,7 +306,7 @@ export default function PhotoImport() {
               <div className="bg-blue-50 rounded-lg p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-gray-900">
-                    {photoURLs.length} photo{photoURLs.length > 1 ? 's' : ''} détectée{photoURLs.length > 1 ? 's' : ''}
+                    {photoURLs.length} {t('photoImport.photosDetected')}
                   </h3>
                 </div>
                 {previewImages.length > 0 && (
@@ -323,7 +323,7 @@ export default function PhotoImport() {
 
             {selectedVolume && photoURLs.length === 0 && !isScanning && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-yellow-800">Aucune photo trouvée sur cet appareil.</p>
+                <p className="text-yellow-800">{t('ui.noPhotosFound')}</p>
               </div>
             )}
           </div>

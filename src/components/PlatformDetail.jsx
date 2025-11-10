@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function PlatformDetail({ platform, onClose, onUpdate, onDeleteRequest }) {
+  const { t } = useLanguage()
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
     name: platform.name,
@@ -29,7 +31,7 @@ export default function PlatformDetail({ platform, onClose, onUpdate, onDeleteRe
       setIsEditing(false)
     } catch (error) {
       console.error('Error updating platform:', error)
-      alert('Erreur lors de la mise à jour')
+      alert(t('platforms.updatingPlatform'))
     }
   }
 
@@ -49,7 +51,7 @@ export default function PlatformDetail({ platform, onClose, onUpdate, onDeleteRe
           {/* Status */}
           <div>
             <h3 className="text-sm font-medium text-gray-500 mb-2">
-              Statut de connexion
+              {t('platforms.connectionStatus')}
             </h3>
             <div className="flex items-center gap-2">
               {isConfigured ? (
@@ -57,24 +59,24 @@ export default function PlatformDetail({ platform, onClose, onUpdate, onDeleteRe
                   {hasToken ? (
                     <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm bg-green-100 text-green-800">
                       <div className="w-2 h-2 rounded-full bg-green-500" />
-                      Connecté et authentifié
+                      {t('platforms.connectedAuthenticated')}
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm bg-orange-100 text-orange-800">
                       <div className="w-2 h-2 rounded-full bg-orange-500" />
-                      Configuré (authentification requise)
+                      {t('platforms.configuredAuthRequired')}
                     </span>
                   )}
                 </>
               ) : (
                 <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm bg-gray-100 text-gray-600">
                   <div className="w-2 h-2 rounded-full bg-gray-400" />
-                  Non configuré
+                  {t('platforms.notConfigured')}
                 </span>
               )}
               {platform.environment === 'sandbox' && (
                 <span className="px-3 py-1 rounded-full text-sm bg-yellow-100 text-yellow-800">
-                  Mode Sandbox
+                  {t('platforms.sandboxMode')}
                 </span>
               )}
             </div>
@@ -84,7 +86,7 @@ export default function PlatformDetail({ platform, onClose, onUpdate, onDeleteRe
           {platform.base_url && (
             <div>
               <h3 className="text-sm font-medium text-gray-500 mb-1">
-                URL de base
+                {t('platforms.baseUrl')}
               </h3>
               <p className="text-gray-900">{platform.base_url}</p>
             </div>
@@ -94,15 +96,15 @@ export default function PlatformDetail({ platform, onClose, onUpdate, onDeleteRe
           {isConfigured && (
             <div>
               <h3 className="text-sm font-medium text-gray-500 mb-2">
-                Configuration API
+                {t('platforms.apiConfiguration')}
               </h3>
               <div className="space-y-2 bg-gray-50 rounded-lg p-3">
                 <div>
-                  <span className="text-xs text-gray-500">App ID:</span>
+                  <span className="text-xs text-gray-500">{t('platforms.appId')}</span>
                   <p className="text-sm text-gray-900 font-mono">{platform.api_key}</p>
                 </div>
                 <div>
-                  <span className="text-xs text-gray-500">Cert ID:</span>
+                  <span className="text-xs text-gray-500">{t('platforms.certId')}</span>
                   <p className="text-sm text-gray-900">••••••••</p>
                 </div>
               </div>
@@ -113,10 +115,10 @@ export default function PlatformDetail({ platform, onClose, onUpdate, onDeleteRe
           {hasToken && (
             <div>
               <h3 className="text-sm font-medium text-gray-500 mb-2">
-                Authentification
+                {t('platforms.authentication')}
               </h3>
               <div className="space-y-1 text-sm">
-                <p className="text-gray-600">Token d'accès actif</p>
+                <p className="text-gray-600">{t('platforms.activeToken')}</p>
                 {platform.token_expires_at && (
                   <p className="text-xs text-gray-500">
                     Expire le {new Date(platform.token_expires_at).toLocaleString('fr-FR')}
@@ -128,9 +130,9 @@ export default function PlatformDetail({ platform, onClose, onUpdate, onDeleteRe
 
           {/* Timestamps */}
           <div className="border-t pt-4 text-sm text-gray-500">
-            <p>Créé le {new Date(platform.created_at).toLocaleString('fr-FR')}</p>
+            <p>{t('ui.createdAt')} {new Date(platform.created_at).toLocaleString('fr-FR')}</p>
             {platform.updated_at && (
-              <p>Modifié le {new Date(platform.updated_at).toLocaleString('fr-FR')}</p>
+              <p>{t('ui.modifiedAt')} {new Date(platform.updated_at).toLocaleString('fr-FR')}</p>
             )}
           </div>
 
@@ -140,13 +142,13 @@ export default function PlatformDetail({ platform, onClose, onUpdate, onDeleteRe
               onClick={() => setIsEditing(true)}
               className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium"
             >
-              Modifier
+              {t('common.edit')}
             </button>
             <button
               onClick={handleDeleteClick}
               className="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors font-medium"
             >
-              Supprimer
+              {t('common.delete')}
             </button>
           </div>
         </div>
@@ -154,7 +156,7 @@ export default function PlatformDetail({ platform, onClose, onUpdate, onDeleteRe
         <form onSubmit={handleUpdate} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nom *
+              {t('platforms.platformName')} *
             </label>
             <input
               type="text"
@@ -167,7 +169,7 @@ export default function PlatformDetail({ platform, onClose, onUpdate, onDeleteRe
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              URL de base
+              {t('platforms.baseUrl')}
             </label>
             <input
               type="url"
@@ -179,7 +181,7 @@ export default function PlatformDetail({ platform, onClose, onUpdate, onDeleteRe
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Environnement
+              {t('platforms.environment')}
             </label>
             <div className="relative">
               <select
@@ -188,8 +190,8 @@ export default function PlatformDetail({ platform, onClose, onUpdate, onDeleteRe
                 className="w-full px-4 py-2.5 pr-10 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer text-gray-700 font-medium shadow-sm hover:border-gray-400 transition-colors"
                 style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}
               >
-                <option value="production">Production</option>
-                <option value="sandbox">Sandbox (Test)</option>
+                <option value="production">{t('platforms.production')}</option>
+                <option value="sandbox">{t('platforms.sandbox')}</option>
               </select>
               <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                 <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -200,12 +202,12 @@ export default function PlatformDetail({ platform, onClose, onUpdate, onDeleteRe
           </div>
 
           <div className="border-t pt-4">
-            <h3 className="text-sm font-medium text-gray-900 mb-3">Configuration API</h3>
+            <h3 className="text-sm font-medium text-gray-900 mb-3">{t('platforms.apiConfig')}</h3>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  App ID (Client ID)
+                  {t('platforms.appId')}
                 </label>
                 <input
                   type="text"
@@ -217,7 +219,7 @@ export default function PlatformDetail({ platform, onClose, onUpdate, onDeleteRe
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Cert ID (Client Secret)
+                  {t('platforms.certId')}
                 </label>
                 <div className="relative">
                   <input
@@ -252,14 +254,14 @@ export default function PlatformDetail({ platform, onClose, onUpdate, onDeleteRe
               type="submit"
               className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium"
             >
-              Enregistrer
+              {t('common.save')}
             </button>
             <button
               type="button"
               onClick={() => setIsEditing(false)}
               className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors font-medium"
             >
-              Annuler
+              {t('common.cancel')}
             </button>
           </div>
         </form>

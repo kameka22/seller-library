@@ -93,33 +93,33 @@ export default function CreatePlatformForm({ onSuccess, onCancel }) {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              App ID (Client ID)
+              {t('platforms.appId')}
             </label>
             <input
               type="text"
               value={formData.api_key}
               onChange={(e) => setFormData({ ...formData, api_key: e.target.value })}
-              placeholder="Votre eBay App ID"
+              placeholder={t('placeholders.appId')}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Cert ID (Client Secret)
+              {t('platforms.certId')}
             </label>
             <input
               type="password"
               value={formData.api_secret}
               onChange={(e) => setFormData({ ...formData, api_secret: e.target.value })}
-              placeholder="Votre eBay Cert ID"
+              placeholder={t('placeholders.certId')}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
 
         <p className="mt-3 text-xs text-gray-500">
-          Ces informations sont disponibles dans votre compte développeur eBay
+          {t('platforms.devInfo')}
         </p>
       </div>
 
@@ -129,7 +129,7 @@ export default function CreatePlatformForm({ onSuccess, onCancel }) {
           disabled={loading}
           className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium disabled:bg-blue-300"
         >
-          {loading ? 'Création...' : 'Créer la plateforme'}
+          {loading ? t('platforms.creating') : t('platforms.createPlatform')}
         </button>
         <button
           type="button"
@@ -137,7 +137,7 @@ export default function CreatePlatformForm({ onSuccess, onCancel }) {
           disabled={loading}
           className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors font-medium disabled:bg-gray-100"
         >
-          Annuler
+          {t('common.cancel')}
         </button>
       </div>
     </form>

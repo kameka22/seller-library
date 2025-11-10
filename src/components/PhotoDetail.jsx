@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { convertFileSrc } from '@tauri-apps/api/tauri'
 import { photosAPI } from '../utils/api'
 import PhotoEditor from './PhotoEditor'
+import { useTranslation } from '../contexts/LanguageContext'
 
 export default function PhotoDetail({ photo, onClose, onPhotoUpdated }) {
+  const { t } = useTranslation()
   const [isEditing, setIsEditing] = useState(false)
   const [imageKey, setImageKey] = useState(Date.now())
 
@@ -24,7 +26,7 @@ export default function PhotoDetail({ photo, onClose, onPhotoUpdated }) {
       }
     } catch (err) {
       console.error('Error saving edited photo:', err)
-      alert('Erreur lors de la sauvegarde de la photo')
+      alert(t('ui.savingError'))
     }
   }
 
@@ -67,7 +69,7 @@ export default function PhotoDetail({ photo, onClose, onPhotoUpdated }) {
               alt={photo.file_name}
               className="w-full h-auto max-h-96 object-contain"
               onError={(e) => {
-                e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect fill="%23ddd" width="400" height="300"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23999">Erreur de chargement</text></svg>'
+                e.target.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect fill="%23ddd" width="400" height="300"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23999">${t('ui.loadingError')}</text></svg>`
               }}
             />
           </div>
@@ -75,7 +77,7 @@ export default function PhotoDetail({ photo, onClose, onPhotoUpdated }) {
           {/* Info Grid */}
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">Dimensions</h3>
+              <h3 className="text-sm font-medium text-gray-500 mb-1">{t('ui.dimensions')}</h3>
               <p className="text-gray-900">
                 {photo.width && photo.height
                   ? `${photo.width} × ${photo.height} px`
@@ -84,19 +86,19 @@ export default function PhotoDetail({ photo, onClose, onPhotoUpdated }) {
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">Taille</h3>
+              <h3 className="text-sm font-medium text-gray-500 mb-1">{t('ui.size')}</h3>
               <p className="text-gray-900">{fileSizeKB} KB</p>
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">Chemin original</h3>
+              <h3 className="text-sm font-medium text-gray-500 mb-1">{t('ui.originalPath')}</h3>
               <p className="text-gray-900 text-sm truncate" title={photo.original_path}>
                 {photo.original_path}
               </p>
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">Importé le</h3>
+              <h3 className="text-sm font-medium text-gray-500 mb-1">{t('ui.importedOn')}</h3>
               <p className="text-gray-900">
                 {new Date(photo.created_at).toLocaleDateString('fr-FR')}
               </p>
@@ -109,13 +111,13 @@ export default function PhotoDetail({ photo, onClose, onPhotoUpdated }) {
               onClick={() => setIsEditing(true)}
               className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
             >
-              Éditer
+              {t('common.edit')}
             </button>
             <button
               onClick={onClose}
               className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors"
             >
-              Fermer
+              {t('common.close')}
             </button>
           </div>
         </div>

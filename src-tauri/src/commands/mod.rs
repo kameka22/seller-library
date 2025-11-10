@@ -215,7 +215,7 @@ async fn import_photo(pool: &SqlitePool, path: &Path) -> Result<(), Box<dyn std:
 
 #[tauri::command]
 pub async fn delete_photo(pool: State<'_, SqlitePool>, photo_id: i64) -> Result<(), String> {
-    // Récupérer le chemin du fichier avant de supprimer de la DB
+    // Get the file path before deleting from the DB
     let photo = sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE id = ?")
         .bind(photo_id)
         .fetch_optional(pool.inner())
@@ -223,13 +223,13 @@ pub async fn delete_photo(pool: State<'_, SqlitePool>, photo_id: i64) -> Result<
         .map_err(|e| e.to_string())?;
 
     if let Some(photo) = photo {
-        // Supprimer le fichier physique
+        // Delete the physical file
         if Path::new(&photo.file_path).exists() {
             fs::remove_file(&photo.file_path)
                 .map_err(|e| format!("Failed to delete file: {}", e))?;
         }
 
-        // Supprimer de la base de données
+        // Delete from the database
         let result = sqlx::query("DELETE FROM photos WHERE id = ?")
             .bind(photo_id)
             .execute(pool.inner())
@@ -253,7 +253,7 @@ pub struct DeleteFolderRequest {
 
 #[tauri::command]
 pub async fn delete_photo_db_only(pool: State<'_, SqlitePool>, photo_id: i64) -> Result<(), String> {
-    // Supprimer uniquement de la base de données, pas le fichier physique
+    // Delete only from the database, not the physical file
     let result = sqlx::query("DELETE FROM photos WHERE id = ?")
         .bind(photo_id)
         .execute(pool.inner())
@@ -278,7 +278,7 @@ pub async fn delete_folder_recursive(
         return Err("Folder does not exist".to_string());
     }
 
-    // Récupérer toutes les photos dans ce dossier et ses sous-dossiers
+    // Get all photos in this folder and its subfolders
     let photos = sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE file_path LIKE ?")
         .bind(format!("{}%", request.folder_path))
         .fetch_all(pool.inner())
@@ -288,7 +288,7 @@ pub async fn delete_folder_recursive(
     let mut deleted_count = 0;
     let mut errors = vec![];
 
-    // Supprimer chaque photo de la DB
+    // Delete each photo from the DB
     for photo in &photos {
         match sqlx::query("DELETE FROM photos WHERE id = ?")
             .bind(photo.id)
@@ -300,7 +300,7 @@ pub async fn delete_folder_recursive(
         }
     }
 
-    // Supprimer le dossier physique avec tout son contenu
+    // Delete the physical folder with all its contents
     if let Err(e) = fs::remove_dir_all(folder_path) {
         errors.push(format!("Failed to delete folder: {}", e));
     }
@@ -316,7 +316,7 @@ pub async fn delete_folder_recursive_db_only(
     pool: State<'_, SqlitePool>,
     request: DeleteFolderRequest,
 ) -> Result<serde_json::Value, String> {
-    // Récupérer toutes les photos dans ce dossier et ses sous-dossiers
+    // Get all photos in this folder and its subfolders
     let photos = sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE file_path LIKE ?")
         .bind(format!("{}%", request.folder_path))
         .fetch_all(pool.inner())
@@ -326,7 +326,7 @@ pub async fn delete_folder_recursive_db_only(
     let mut deleted_count = 0;
     let mut errors = vec![];
 
-    // Supprimer chaque photo de la DB uniquement (pas les fichiers physiques)
+    // Delete each photo from the DB only (not the physical files)
     for photo in &photos {
         match sqlx::query("DELETE FROM photos WHERE id = ?")
             .bind(photo.id)
@@ -356,7 +356,7 @@ pub async fn save_edited_photo(
     photo_id: i64,
     request: SaveEditedPhotoRequest,
 ) -> Result<Photo, String> {
-    // Récupérer la photo depuis la DB
+    // Get the photo from the DB
     let photo = sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE id = ?")
         .bind(photo_id)
         .fetch_optional(pool.inner())
@@ -364,7 +364,7 @@ pub async fn save_edited_photo(
         .map_err(|e| e.to_string())?
         .ok_or_else(|| "Photo not found".to_string())?;
 
-    // Décoder les données base64
+    // Decode the base64 data
     let image_data = general_purpose::STANDARD
         .decode(&request.base64_data)
         .map_err(|e| format!("Failed to decode base64: {}", e))?;
@@ -375,13 +375,13 @@ pub async fn save_edited_photo(
     let target_original_path: String;
 
     if request.create_copy {
-        // Créer une copie avec numérotation
+        // Create a copy with numbering
         let original_path = Path::new(&photo.file_path);
         let parent = original_path.parent().ok_or("Invalid file path")?;
         let stem = original_path.file_stem().ok_or("Invalid file name")?.to_string_lossy();
         let extension = original_path.extension().map(|e| e.to_string_lossy()).unwrap_or_default();
 
-        // Trouver le prochain numéro disponible
+        // Find the next available number
         let mut copy_number = 2;
         loop {
             let new_file_name = if extension.is_empty() {
@@ -396,7 +396,7 @@ pub async fn save_edited_photo(
                 target_path = new_path.to_string_lossy().to_string();
                 target_file_name = new_file_name;
 
-                // Construire l'original_path pour la copie
+                // Build the original_path for the copy
                 let original_parent = Path::new(&photo.original_path).parent().ok_or("Invalid original path")?;
                 target_original_path = original_parent.join(&target_file_name).to_string_lossy().to_string();
                 break;
@@ -405,18 +405,18 @@ pub async fn save_edited_photo(
             copy_number += 1;
         }
 
-        // Écrire le fichier copie
+        // Write the copy file
         fs::write(&target_path, &image_data)
             .map_err(|e| format!("Failed to write file: {}", e))?;
 
-        // Récupérer les dimensions
+        // Get the dimensions
         let (width, height) = if let Ok(img) = image::open(&target_path) {
             (Some(img.width() as i32), Some(img.height() as i32))
         } else {
             (None, None)
         };
 
-        // Créer une nouvelle entrée dans la DB
+        // Create a new entry in the DB
         let result = sqlx::query(
             "INSERT INTO photos (file_path, original_path, file_name, file_size, width, height) VALUES (?, ?, ?, ?, ?, ?)"
         )
@@ -432,25 +432,25 @@ pub async fn save_edited_photo(
 
         let new_photo_id = result.last_insert_rowid();
 
-        // Retourner la nouvelle photo
+        // Return the new photo
         sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE id = ?")
             .bind(new_photo_id)
             .fetch_one(pool.inner())
             .await
             .map_err(|e| e.to_string())
     } else {
-        // Écraser le fichier original
+        // Overwrite the original file
         fs::write(&photo.file_path, &image_data)
             .map_err(|e| format!("Failed to write file: {}", e))?;
 
-        // Récupérer les nouvelles dimensions
+        // Get the new dimensions
         let (width, height) = if let Ok(img) = image::open(&photo.file_path) {
             (Some(img.width() as i32), Some(img.height() as i32))
         } else {
             (photo.width, photo.height)
         };
 
-        // Mettre à jour la DB
+        // Update the DB
         sqlx::query(
             "UPDATE photos SET file_size = ?, width = ?, height = ? WHERE id = ?"
         )
@@ -462,7 +462,7 @@ pub async fn save_edited_photo(
         .await
         .map_err(|e| e.to_string())?;
 
-        // Retourner la photo mise à jour
+        // Return the updated photo
         sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE id = ?")
             .bind(photo_id)
             .fetch_one(pool.inner())

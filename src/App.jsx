@@ -71,7 +71,7 @@ function AppContent() {
     }
   }
 
-  // Fonction pour vérifier les mises à jour
+  // Function to check for updates
   const checkForUpdates = async () => {
     try {
       const update = await invoke('check_for_updates')
@@ -83,17 +83,17 @@ function AppContent() {
       }
     } catch (error) {
       console.error('Update check failed:', error)
-      // En cas d'erreur, on ne fait rien (silencieux)
+      // In case of error, do nothing (silent)
       setUpdateCheckStatus(null)
     }
   }
 
-  // Vérifier au lancement et toutes les 30 minutes
+  // Check at launch and every 30 minutes
   useEffect(() => {
-    // Vérification au lancement
+    // Check at launch
     checkForUpdates()
 
-    // Vérification toutes les 30 minutes (1800000 ms)
+    // Check every 30 minutes (1800000 ms)
     const interval = setInterval(checkForUpdates, 30 * 60 * 1000)
 
     return () => clearInterval(interval)
@@ -104,7 +104,7 @@ function AppContent() {
     setIsCheckingUpdate(true)
     setUpdateInfo(null)
 
-    // Lancer la vérification
+    // Launch the check
     try {
       const update = await invoke('check_for_updates')
       if (update) {

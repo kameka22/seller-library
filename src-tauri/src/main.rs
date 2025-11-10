@@ -8,11 +8,11 @@ mod models;
 mod commands;
 mod updater;
 
-// SqlitePool est géré par Tauri State
+// SqlitePool is managed by Tauri State
 
 #[tokio::main]
 async fn main() {
-    // Initialiser la base de données
+    // Initialize the database
     let pool = db::init_db()
         .await
         .expect("Failed to initialize database");

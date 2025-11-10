@@ -273,7 +273,7 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
                       className="w-full px-4 py-2.5 pr-10 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer text-gray-700 font-medium shadow-sm hover:border-gray-400 transition-colors"
                       style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}
                     >
-                      <option value="" className="text-gray-500">Sélectionner une catégorie</option>
+                      <option value="" className="text-gray-500">{t('categories.selectCategory')}</option>
                       {categories.map((category) => (
                         <option key={category.id} value={category.id} className="text-gray-900">
                           {category.name}

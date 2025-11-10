@@ -181,7 +181,7 @@ export default function PhotoImport() {
       const minutes = String(now.getMinutes()).padStart(2, '0')
       return `${year}-${month}-${day} ${hours}-${minutes}`
     } else {
-      return customFolderName || 'nom_personnalisé'
+      return customFolderName || t('ui.customName')
     }
   }
 
@@ -333,29 +333,29 @@ export default function PhotoImport() {
         {currentStep === 2 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">Choisir la destination</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('ui.chooseDestination')}</h2>
               <p className="text-gray-600">
-                Sélectionnez le dossier de destination et le format du nom de dossier.
+                {t('ui.selectDestinationInstructions')}
               </p>
             </div>
 
             {/* Destination Folder */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Dossier de destination
+                {t('ui.destinationFolder')}
               </label>
               <div className="flex gap-3">
                 <input
                   type="text"
                   readOnly
-                  value={destinationFolder || 'Aucun dossier sélectionné'}
+                  value={destinationFolder || t('ui.noFolderSelected')}
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
                 />
                 <button
                   onClick={handleSelectDestination}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  Parcourir
+                  {t('ui.browse')}
                 </button>
               </div>
             </div>
@@ -363,7 +363,7 @@ export default function PhotoImport() {
             {/* Folder Format Options */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Format du nom de dossier
+                {t('ui.folderNameFormat')}
               </label>
 
               {/* Automatic Format */}
@@ -387,9 +387,9 @@ export default function PhotoImport() {
                     )}
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-gray-900 mb-1">Format automatique</div>
+                    <div className="font-medium text-gray-900 mb-1">{t('ui.automaticFormat')}</div>
                     <div className="text-sm text-gray-600">
-                      Le dossier sera nommé avec la date et l'heure actuelles
+                      {t('ui.automaticFormatDesc')}
                     </div>
                     <div className="text-sm text-gray-500 mt-2 font-mono bg-white px-3 py-1 rounded border border-gray-200 inline-block">
                       {getFolderPreview()}
@@ -419,9 +419,9 @@ export default function PhotoImport() {
                     )}
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-gray-900 mb-1">Format personnalisé</div>
+                    <div className="font-medium text-gray-900 mb-1">{t('ui.customFormat')}</div>
                     <div className="text-sm text-gray-600 mb-3">
-                      Choisissez votre propre nom de dossier
+                      {t('ui.customFormatDesc')}
                     </div>
                     {folderFormatOption === 'custom' && (
                       <input
@@ -429,7 +429,7 @@ export default function PhotoImport() {
                         value={customFolderName}
                         onChange={(e) => setCustomFolderName(e.target.value)}
                         onClick={(e) => e.stopPropagation()}
-                        placeholder="Ex: Vacances_2024"
+                        placeholder={t('ui.customFolderPlaceholder')}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     )}
@@ -441,7 +441,7 @@ export default function PhotoImport() {
             {/* Preview */}
             {destinationFolder && (
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <div className="text-sm text-gray-600 mb-1">Chemin complet :</div>
+                <div className="text-sm text-gray-600 mb-1">{t('ui.fullPath')}</div>
                 <div className="font-mono text-sm text-gray-900 break-all">
                   {destinationFolder}/{getFolderPreview()}
                 </div>
@@ -454,26 +454,26 @@ export default function PhotoImport() {
         {currentStep === 3 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">Ajouter une description (optionnel)</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('ui.addDescription')}</h2>
               <p className="text-gray-600">
-                Ajoutez des notes ou une description qui seront sauvegardées avec les photos importées.
+                {t('ui.addDescriptionInstructions')}
               </p>
             </div>
 
             {/* Description Text Area */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description
+                {t('photoImport.description')}
               </label>
               <textarea
                 value={photoDescription}
                 onChange={(e) => setPhotoDescription(e.target.value)}
                 rows="8"
-                placeholder="Exemple : « Superbe faience de quimper », « Statue de bronze »..."
+                placeholder={t('photoImport.descriptionPlaceholder')}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               />
               <div className="text-sm text-gray-500 mt-2">
-                {photoDescription.length} caractère{photoDescription.length > 1 ? 's' : ''}
+                {photoDescription.length} {photoDescription.length > 1 ? t('ui.characters') : t('ui.character')}
               </div>
             </div>
 
@@ -484,7 +484,7 @@ export default function PhotoImport() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <div className="text-sm text-blue-800">
-                  La description sera enregistrée dans un fichier <span className="font-mono font-medium">description.txt</span> dans le dossier de destination.
+                  {t('ui.descriptionSavedInFile')}
                 </div>
               </div>
             </div>
@@ -495,24 +495,24 @@ export default function PhotoImport() {
         {currentStep === 4 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">Révision et import</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('ui.reviewAndImport')}</h2>
               <p className="text-gray-600">
-                Vérifiez les paramètres et lancez l'import des photos.
+                {t('ui.reviewAndImportInstructions')}
               </p>
             </div>
 
             {/* Summary Cards */}
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <div className="text-sm text-gray-600 mb-1">Appareil</div>
+                <div className="text-sm text-gray-600 mb-1">{t('ui.device')}</div>
                 <div className="font-medium text-gray-900">{selectedVolume?.name || 'N/A'}</div>
               </div>
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <div className="text-sm text-gray-600 mb-1">Destination</div>
+                <div className="text-sm text-gray-600 mb-1">{t('photoImport.destination')}</div>
                 <div className="font-medium text-gray-900 truncate">{getFolderPreview()}</div>
               </div>
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <div className="text-sm text-gray-600 mb-1">Photos</div>
+                <div className="text-sm text-gray-600 mb-1">{t('ui.photos')}</div>
                 <div className="font-medium text-gray-900">{photoURLs.length}</div>
               </div>
             </div>
@@ -525,9 +525,9 @@ export default function PhotoImport() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={deleteAfterImport ? "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" : "M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"} />
                   </svg>
                   <div>
-                    <div className="font-medium text-gray-900">Vider l'appareil après import</div>
+                    <div className="font-medium text-gray-900">{t('ui.emptyDeviceAfterImport')}</div>
                     <div className={`text-sm ${deleteAfterImport ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
-                      {deleteAfterImport ? 'Les fichiers seront supprimés' : 'Les fichiers seront conservés'}
+                      {deleteAfterImport ? t('ui.filesWillBeDeleted') : t('ui.filesWillBeKept')}
                     </div>
                   </div>
                 </div>
@@ -557,14 +557,14 @@ export default function PhotoImport() {
               {isImporting ? (
                 <>
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  Import en cours...
+                  {t('ui.importInProgress')}
                 </>
               ) : (
                 <>
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                   </svg>
-                  Importer {photoURLs.length} photo{photoURLs.length > 1 ? 's' : ''}
+                  {t('ui.importPhotos', { count: photoURLs.length })}
                 </>
               )}
             </button>
@@ -582,7 +582,7 @@ export default function PhotoImport() {
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Précédent
+          {t('ui.previous')}
         </button>
 
         {currentStep < 4 && (
@@ -594,7 +594,7 @@ export default function PhotoImport() {
             }
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            Suivant
+            {t('ui.next')}
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>

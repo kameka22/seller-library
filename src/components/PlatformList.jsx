@@ -62,7 +62,7 @@ export default function PlatformList() {
       setPlatformToDelete(null)
     } catch (error) {
       console.error('Error deleting platform:', error)
-      alert('Erreur lors de la suppression de la plateforme')
+      alert(t('errors.deletingObject'))
     }
   }
 
@@ -76,7 +76,7 @@ export default function PlatformList() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Chargement...</div>
+        <div className="text-gray-500">{t('common.loading')}</div>
       </div>
     )
   }

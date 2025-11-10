@@ -143,17 +143,24 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
     try {
       // Build the full path for the new folder
       const fullPath = [...folderTree.commonRoot, ...currentPath, newFolderName].join('/')
+      const fullPathWithSlash = '/' + fullPath
+
+      console.log('Creating folder at:', fullPathWithSlash)
 
       // Create folder on file system immediately
-      await photosAPI.createFolder('/' + fullPath)
+      await photosAPI.createFolder(fullPathWithSlash)
+
+      console.log('Folder created successfully, adding to local state')
 
       // Add to created folders list to make it visible in the tree
       setCreatedFolders([...createdFolders, fullPath])
 
       // Notify parent to reload photos
+      console.log('Calling onFolderCreated to reload')
       if (onFolderCreated) {
         await onFolderCreated()
       }
+      console.log('Reload completed')
 
       // Navigate to the new folder after creation
       setCurrentPath([...currentPath, newFolderName])

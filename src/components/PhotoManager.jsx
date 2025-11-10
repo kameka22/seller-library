@@ -334,7 +334,7 @@ export default function PhotoManager() {
   const confirmMove = async (destinationPath) => {
     const folders = selectedItems
       .filter(id => id.startsWith('folder-'))
-      .map(id => id.replace('folder-', ''))
+      .map(id => '/' + id.replace('folder-', '')) // Add "/" prefix for absolute paths
 
     const photoIds = selectedItems
       .filter(id => id.startsWith('photo-'))

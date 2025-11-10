@@ -1,7 +1,7 @@
-import { useTranslation } from '../contexts/LanguageContext'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function PlatformCard({ platform, onClick }) {
-  const { t } = useTranslation()
+  const { t } = useLanguage()
   const isConfigured = platform.api_key && platform.api_secret
   const hasToken = platform.access_token
 

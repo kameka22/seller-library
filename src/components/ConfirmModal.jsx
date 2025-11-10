@@ -1,7 +1,7 @@
-import { useTranslation } from '../contexts/LanguageContext'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function ConfirmModal({ isOpen, onClose, onConfirm, title, message, confirmText, cancelText, danger = false, children }) {
-  const { t } = useTranslation()
+  const { t } = useLanguage()
   if (!isOpen) return null
 
   const handleConfirm = () => {

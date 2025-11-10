@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { convertFileSrc } from '@tauri-apps/api/tauri'
 import { photosAPI } from '../utils/api'
 import PhotoEditor from './PhotoEditor'
-import { useTranslation } from '../contexts/LanguageContext'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function PhotoDetail({ photo, onClose, onPhotoUpdated }) {
-  const { t } = useTranslation()
+  const { t } = useLanguage()
   const [isEditing, setIsEditing] = useState(false)
   const [imageKey, setImageKey] = useState(Date.now())
 

@@ -1,8 +1,8 @@
 import { convertFileSrc } from '@tauri-apps/api/tauri'
-import { useTranslation } from '../contexts/LanguageContext'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function PhotoGrid({ photos, onPhotoClick, selectedPhotos = [], onToggleSelect }) {
-  const { t } = useTranslation()
+  const { t } = useLanguage()
 
   if (photos.length === 0) {
     return (

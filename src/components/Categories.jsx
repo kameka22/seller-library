@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
 import ConfirmModal from './ConfirmModal'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function Categories() {
+  const { t } = useLanguage()
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -22,7 +24,7 @@ export default function Categories() {
       setError(null)
     } catch (err) {
       console.error('Error loading categories:', err)
-      setError('Erreur lors du chargement des catégories')
+      setError(t('errors.loadingCategories'))
     } finally {
       setLoading(false)
     }

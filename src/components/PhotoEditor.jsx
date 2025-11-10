@@ -3,8 +3,10 @@ import { readBinaryFile } from '@tauri-apps/api/fs'
 import ReactCrop from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import ConfirmModal from './ConfirmModal'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function PhotoEditor({ photo, onClose, onSave }) {
+  const { t } = useLanguage()
   const [brightness, setBrightness] = useState(100)
   const [contrast, setContrast] = useState(100)
   const [scale, setScale] = useState(100)
@@ -270,7 +272,7 @@ export default function PhotoEditor({ photo, onClose, onSave }) {
           <div className="flex justify-between items-start mb-4">
             <div className="flex-1 min-w-0">
               <h2 className="text-2xl font-bold text-gray-900">
-                Éditer la photo
+                {t('photoEditor.editPhoto')}
               </h2>
               <p className="text-sm text-gray-500 truncate mt-1" title={photo.file_name}>
                 {photo.file_name}
@@ -322,31 +324,31 @@ export default function PhotoEditor({ photo, onClose, onSave }) {
                       onClick={handleRotate}
                       className="flex-1 px-3 py-2 bg-purple-600 text-white text-sm rounded-md hover:bg-purple-700 transition-colors"
                     >
-                      ↻ Rotation 90°
+                      {t('photoEditor.rotation90')}
                     </button>
                     <button
                       onClick={handleCropToggle}
                       className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
                     >
-                      ✂ Recadrer
+                      {t('photoEditor.crop')}
                     </button>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <div className="text-sm font-medium text-gray-700 text-center">Mode recadrage</div>
+                    <div className="text-sm font-medium text-gray-700 text-center">{t('photoEditor.cropMode')}</div>
                     <div className="flex gap-2">
                       <button
                         onClick={handleApplyCrop}
                         className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed"
                         disabled={!completedCrop}
                       >
-                        ✓ Appliquer
+                        {t('photoEditor.apply')}
                       </button>
                       <button
                         onClick={handleCancelCrop}
                         className="flex-1 px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors"
                       >
-                        ✕ Annuler
+                        {t('photoEditor.cancel')}
                       </button>
                     </div>
                   </div>

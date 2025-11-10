@@ -6,8 +6,10 @@ import ObjectDetail from './ObjectDetail'
 import CreateObjectForm from './CreateObjectForm'
 import SlidePanel from './SlidePanel'
 import ConfirmModal from './ConfirmModal'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function ObjectList() {
+  const { t } = useLanguage()
   const [objects, setObjects] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
@@ -35,7 +37,7 @@ export default function ObjectList() {
       setError(null)
     } catch (err) {
       console.error('Error loading objects:', err)
-      setError('Erreur lors du chargement des objets')
+      setError(t('errors.loadingObjects'))
     } finally {
       setLoading(false)
     }
@@ -57,7 +59,7 @@ export default function ObjectList() {
       setShowCreatePanel(false)
     } catch (err) {
       console.error('Error creating object:', err)
-      alert('Erreur lors de la création de l\'objet')
+      alert(t('errors.creatingObject'))
     }
   }
 
@@ -81,7 +83,7 @@ export default function ObjectList() {
       setObjectToDelete(null)
     } catch (error) {
       console.error('Error deleting object:', error)
-      alert('Erreur lors de la suppression')
+      alert(t('errors.deletingObject'))
     }
   }
 
@@ -152,7 +154,7 @@ export default function ObjectList() {
       <div className="flex gap-4 items-center">
         <input
           type="text"
-          placeholder="Rechercher un objet..."
+          placeholder={t('placeholders.objectSearch')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -161,7 +163,7 @@ export default function ObjectList() {
           onClick={() => setShowCreatePanel(true)}
           className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap"
         >
-          + Nouvel objet
+          + {t('ui.newObject')}
         </button>
       </div>
 
@@ -172,7 +174,7 @@ export default function ObjectList() {
             <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
-            <span className="font-medium text-gray-700">Filtrer par catégorie :</span>
+            <span className="font-medium text-gray-700">{t('ui.filterByCategory')}</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {categories.map((category) => (
@@ -193,7 +195,7 @@ export default function ObjectList() {
                 onClick={() => setSelectedCategories([])}
                 className="px-3 py-1 rounded-full text-sm bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
               >
-                ✕ Effacer les filtres
+                ✕ {t('ui.clearFilters')}
               </button>
             )}
           </div>
@@ -204,18 +206,18 @@ export default function ObjectList() {
       {filteredObjects.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           {searchQuery || selectedCategories.length > 0
-            ? 'Aucun objet trouvé'
-            : 'Aucun objet. Créez-en un pour commencer !'}
+            ? t('ui.noObjectFound')
+            : t('ui.noObjectCreate')}
         </div>
       ) : (
         <>
           {/* Results info and items per page selector */}
           <div className="flex items-center justify-between mb-4 px-2">
             <div className="text-sm text-gray-600">
-              Affichage de {startIndex + 1} à {Math.min(endIndex, filteredObjects.length)} sur {filteredObjects.length} objet(s)
+              {t('ui.showingResults', { start: startIndex + 1, end: Math.min(endIndex, filteredObjects.length), total: filteredObjects.length })}
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600">Afficher :</label>
+              <label className="text-sm text-gray-600">{t('pagination.itemsPerPage')} :</label>
               <div className="relative">
                 <select
                   value={itemsPerPage}
@@ -309,7 +311,7 @@ export default function ObjectList() {
       <SlidePanel
         isOpen={showCreatePanel}
         onClose={() => setShowCreatePanel(false)}
-        title="Nouvel objet"
+        title={t('ui.newObject')}
       >
         <CreateObjectForm
           onSubmit={handleCreate}
@@ -342,10 +344,10 @@ export default function ObjectList() {
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDeleteConfirm}
-        title="Supprimer cet objet ?"
-        message={`Êtes-vous sûr de vouloir supprimer "${objectToDelete?.name}" ?\n\nLa suppression de l'objet entraîne la suppression de l'association des photos.`}
-        confirmText="Supprimer"
-        cancelText="Annuler"
+        title={t('ui.deleteObject')}
+        message={`${t('objects.deleteConfirm')} "${objectToDelete?.name}" ?\n\n${t('objects.deleteMessage')}`}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
         danger={true}
       />
     </div>

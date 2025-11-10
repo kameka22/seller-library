@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
 import { convertFileSrc } from '@tauri-apps/api/tauri'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function PhotoSelector({ isOpen, onClose, onSelect, objectId }) {
+  const { t } = useLanguage()
   const [photos, setPhotos] = useState([])
   const [selectedPhotos, setSelectedPhotos] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -76,7 +78,7 @@ export default function PhotoSelector({ isOpen, onClose, onSelect, objectId }) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">
-            Sélectionner des photos
+            {t('photos.selectPhotos')}
           </h2>
           <button
             onClick={onClose}
@@ -92,7 +94,7 @@ export default function PhotoSelector({ isOpen, onClose, onSelect, objectId }) {
         <div className="px-6 py-4 border-b border-gray-200 space-y-3">
           <input
             type="text"
-            placeholder="Rechercher par nom de fichier..."
+            placeholder={t('placeholders.photoSearch')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -105,7 +107,7 @@ export default function PhotoSelector({ isOpen, onClose, onSelect, objectId }) {
               className="w-full px-4 py-2.5 pr-10 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer text-gray-700 font-medium shadow-sm hover:border-gray-400 transition-colors"
               style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}
             >
-              <option value="" className="text-gray-500">Tous les dossiers</option>
+              <option value="" className="text-gray-500">{t('photos.allFolders')}</option>
               {folders.map((folder) => (
                 <option key={folder} value={folder} className="text-gray-900">
                   {folder.split('/').slice(-2).join('/')}
@@ -120,9 +122,9 @@ export default function PhotoSelector({ isOpen, onClose, onSelect, objectId }) {
           </div>
 
           <div className="flex items-center justify-between text-sm text-gray-600">
-            <span>{filteredPhotos.length} photo(s) trouvée(s)</span>
+            <span>{filteredPhotos.length} {t('photos.photosFound')}</span>
             <span className="font-medium text-blue-600">
-              {selectedPhotos.length} sélectionnée(s)
+              {selectedPhotos.length} {t('photos.selected')}
             </span>
           </div>
         </div>
@@ -138,7 +140,7 @@ export default function PhotoSelector({ isOpen, onClose, onSelect, objectId }) {
               <svg className="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <p>Aucune photo trouvée</p>
+              <p>{t('ui.noPhotosInCollection')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
@@ -190,14 +192,14 @@ export default function PhotoSelector({ isOpen, onClose, onSelect, objectId }) {
             onClick={onClose}
             className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            Annuler
+            {t('common.cancel')}
           </button>
           <button
             onClick={handleConfirm}
             disabled={selectedPhotos.length === 0}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
           >
-            Confirmer ({selectedPhotos.length})
+            {t('common.confirm')} ({selectedPhotos.length})
           </button>
         </div>
       </div>

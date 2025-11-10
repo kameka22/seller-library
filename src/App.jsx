@@ -46,7 +46,7 @@ function AppContent() {
       case 'user-settings':
         return t('user.settings')
       default:
-        return 'Seller Library'
+        return t('interface.sellerLibraryName')
     }
   }
 

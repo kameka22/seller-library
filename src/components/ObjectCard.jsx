@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
 import { convertFileSrc } from '@tauri-apps/api/tauri'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function ObjectCard({ object, onClick }) {
+  const { t } = useLanguage()
   const [photoCount, setPhotoCount] = useState(0)
   const [firstPhoto, setFirstPhoto] = useState(null)
 
@@ -88,7 +90,7 @@ export default function ObjectCard({ object, onClick }) {
         </div>
 
         <div className="mt-3 text-xs text-gray-400">
-          Créé le {new Date(object.created_at).toLocaleDateString('fr-FR')}
+          {t('ui.createdAt')} {new Date(object.created_at).toLocaleDateString('fr-FR')}
         </div>
       </div>
     </div>

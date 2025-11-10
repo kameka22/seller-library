@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function CreateObjectForm({ onSubmit, onCancel, categories = [] }) {
+  const { t } = useLanguage()
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -27,7 +29,7 @@ export default function CreateObjectForm({ onSubmit, onCancel, categories = [] }
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Nom *
+          {t('common.name')} *
         </label>
         <input
           type="text"
@@ -35,27 +37,27 @@ export default function CreateObjectForm({ onSubmit, onCancel, categories = [] }
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Ex: Montre vintage"
+          placeholder={t('placeholders.objectName')}
         />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Description
+          {t('common.description')}
         </label>
         <textarea
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           rows="4"
-          placeholder="Description de l'objet..."
+          placeholder={t('placeholders.objectDescription')}
         />
       </div>
 
       {categories.length > 0 && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Catégorie
+            {t('common.category')}
           </label>
           <div className="relative">
             <select
@@ -64,7 +66,7 @@ export default function CreateObjectForm({ onSubmit, onCancel, categories = [] }
               className="w-full px-4 py-2.5 pr-10 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer text-gray-700 font-medium shadow-sm hover:border-gray-400 transition-colors"
               style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}
             >
-              <option value="" className="text-gray-500">Sélectionner une catégorie</option>
+              <option value="" className="text-gray-500">{t('categories.selectCategory')}</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id} className="text-gray-900">
                   {category.name}
@@ -83,20 +85,20 @@ export default function CreateObjectForm({ onSubmit, onCancel, categories = [] }
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Année
+            {t('common.year')}
           </label>
           <input
             type="number"
             value={formData.year}
             onChange={(e) => setFormData({ ...formData, year: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="2020"
+            placeholder={t('placeholders.objectYear')}
           />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Poids (kg)
+            {t('common.weight')} (kg)
           </label>
           <input
             type="number"
@@ -104,7 +106,7 @@ export default function CreateObjectForm({ onSubmit, onCancel, categories = [] }
             value={formData.weight}
             onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="0.5"
+            placeholder={t('placeholders.objectWeight')}
           />
         </div>
       </div>
@@ -114,14 +116,14 @@ export default function CreateObjectForm({ onSubmit, onCancel, categories = [] }
           type="submit"
           className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium"
         >
-          Créer
+          {t('common.create')}
         </button>
         <button
           type="button"
           onClick={onCancel}
           className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors font-medium"
         >
-          Annuler
+          {t('common.cancel')}
         </button>
       </div>
     </form>

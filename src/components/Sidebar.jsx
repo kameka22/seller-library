@@ -18,7 +18,7 @@ export default function Sidebar({
     // Function to load user name from localStorage
     const loadUserName = () => {
       const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
-      setUserName(userInfo.firstName || "User");
+      setUserName(userInfo.firstName || t('interface.user'));
     };
 
     // Load initially
@@ -117,7 +117,7 @@ export default function Sidebar({
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="p-2 hover:bg-gray-800 rounded-lg transition-colors ml-auto"
-          title={isCollapsed ? "Déplier" : "Replier"}
+          title={isCollapsed ? t('interface.expand') : t('interface.collapse')}
         >
           <svg
             className={`w-5 h-5 transition-transform ${isCollapsed ? "rotate-180" : ""}`}

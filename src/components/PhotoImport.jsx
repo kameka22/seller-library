@@ -2,15 +2,17 @@ import { useState, useEffect } from 'react'
 import { open } from '@tauri-apps/api/dialog'
 import { invoke } from '@tauri-apps/api/tauri'
 import Stepper from './Stepper'
+import { useLanguage } from '../contexts/LanguageContext'
 
-const STEPS = [
-  { id: 1, label: 'Appareil' },
-  { id: 2, label: 'Destination' },
-  { id: 3, label: 'Description' },
-  { id: 4, label: 'Import' }
+const getSteps = (t) => [
+  { id: 1, label: t('photoImport.device') },
+  { id: 2, label: t('photoImport.destination') },
+  { id: 3, label: t('photoImport.description') },
+  { id: 4, label: t('photoImport.importStep') }
 ]
 
 export default function PhotoImport() {
+  const { t } = useLanguage()
   // Step management
   const [currentStep, setCurrentStep] = useState(1)
   const [unlockedSteps, setUnlockedSteps] = useState(new Set([1]))
@@ -72,7 +74,7 @@ export default function PhotoImport() {
     const selected = await open({
       directory: true,
       multiple: false,
-      title: 'Sélectionner le dossier de destination'
+      title: t('photoImport.selectDestination')
     })
 
     if (selected) {
@@ -188,7 +190,7 @@ export default function PhotoImport() {
       {/* Stepper */}
       <div className="bg-white rounded-lg shadow p-6">
         <Stepper
-          steps={STEPS}
+          steps={getSteps(t)}
           currentStep={currentStep}
           unlockedSteps={unlockedSteps}
           onStepClick={setCurrentStep}
@@ -201,7 +203,7 @@ export default function PhotoImport() {
         {currentStep === 1 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">Sélectionner un appareil</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('photoImport.selectDestination')}</h2>
               <p className="text-gray-600">
                 Sélectionnez un périphérique externe (clé USB, carte SD, disque dur) contenant les photos à importer.
               </p>

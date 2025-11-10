@@ -3,8 +3,10 @@ import { invoke } from '@tauri-apps/api/tauri'
 import { convertFileSrc } from '@tauri-apps/api/tauri'
 import { objectsAPI } from '../utils/api'
 import PhotoSelector from './PhotoSelector'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDeleteRequest, onPhotoUpdate, categories = [] }) {
+  const { t } = useLanguage()
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
     name: object.name,
@@ -50,7 +52,7 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
       setIsEditing(false)
     } catch (error) {
       console.error('Error updating object:', error)
-      alert('Erreur lors de la mise à jour')
+      alert(t('errors.updatingObject'))
     }
   }
 
@@ -90,7 +92,7 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
       }
     } catch (error) {
       console.error('Error updating photo associations:', error)
-      alert('Erreur lors de la mise à jour des associations')
+      alert(t('errors.updatingAssociations'))
     }
   }
 
@@ -106,7 +108,7 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
       }
     } catch (error) {
       console.error('Error removing photo:', error)
-      alert('Erreur lors de la suppression de l\'association')
+      alert(t('errors.removingPhoto'))
     }
   }
 
@@ -122,7 +124,7 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
               {object.description && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">
-                    Description
+                    {t('common.description')}
                   </h3>
                   <p className="text-gray-900">{object.description}</p>
                 </div>
@@ -131,7 +133,7 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
               {categoryName && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">
-                    Catégorie
+                    {t('common.category')}
                   </h3>
                   <span className="inline-block px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
                     {categoryName}
@@ -143,7 +145,7 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
                 {object.year && (
                   <div>
                     <h3 className="text-sm font-medium text-gray-500 mb-1">
-                      Année
+                      {t('common.year')}
                     </h3>
                     <p className="text-gray-900">{object.year}</p>
                   </div>
@@ -152,7 +154,7 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
                 {object.weight && (
                   <div>
                     <h3 className="text-sm font-medium text-gray-500 mb-1">
-                      Poids
+                      {t('common.weight')}
                     </h3>
                     <p className="text-gray-900">{object.weight} kg</p>
                   </div>
@@ -163,13 +165,13 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-medium text-gray-500">
-                    Photos associées ({associatedPhotos.length})
+                    {t('ui.associatedPhotos')} ({associatedPhotos.length})
                   </h3>
                   <button
                     onClick={() => setShowPhotoSelector(true)}
                     className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors font-medium"
                   >
-                    Gérer les photos
+                    {t('ui.managePhotos')}
                   </button>
                 </div>
 
@@ -182,7 +184,7 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
                     <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    <p className="text-sm">Aucune photo associée</p>
+                    <p className="text-sm">{t('ui.noAssociatedPhotos')}</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
@@ -200,7 +202,7 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
                         <button
                           onClick={() => handleRemovePhoto(photo.id)}
                           className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
-                          title="Retirer cette photo"
+                          title={t('interface.removePhoto')}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -213,8 +215,8 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
               </div>
 
               <div className="border-t pt-4 text-sm text-gray-500">
-                <p>Créé le {new Date(object.created_at).toLocaleString('fr-FR')}</p>
-                <p>Modifié le {new Date(object.updated_at).toLocaleString('fr-FR')}</p>
+                <p>{t('ui.createdAt')} {new Date(object.created_at).toLocaleString('fr-FR')}</p>
+                <p>{t('ui.modifiedAt')} {new Date(object.updated_at).toLocaleString('fr-FR')}</p>
               </div>
 
               <div className="flex gap-3 pt-4 border-t">
@@ -222,13 +224,13 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
                   onClick={() => setIsEditing(true)}
                   className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium"
                 >
-                  Modifier
+                  {t('common.edit')}
                 </button>
                 <button
                   onClick={handleDeleteClick}
                   className="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors font-medium"
                 >
-                  Supprimer
+                  {t('common.delete')}
                 </button>
               </div>
             </div>
@@ -236,7 +238,7 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
             <form onSubmit={handleUpdate} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom *
+                  {t('common.name')} *
                 </label>
                 <input
                   type="text"
@@ -249,7 +251,7 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
+                  {t('common.description')}
                 </label>
                 <textarea
                   value={formData.description}
@@ -262,7 +264,7 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
               {categories.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Catégorie
+                    {t('common.category')}
                   </label>
                   <div className="relative">
                     <select
@@ -290,7 +292,7 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Année
+                    {t('common.year')}
                   </label>
                   <input
                     type="number"
@@ -302,7 +304,7 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Poids (kg)
+                    {t('common.weight')} (kg)
                   </label>
                   <input
                     type="number"
@@ -319,14 +321,14 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
                   type="submit"
                   className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium"
                 >
-                  Enregistrer
+                  {t('common.save')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}
                   className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors font-medium"
                 >
-                  Annuler
+                  {t('common.cancel')}
                 </button>
               </div>
             </form>

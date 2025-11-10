@@ -48,10 +48,10 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
     const tree = { folders: {}, photos: [], commonRoot }
 
     // First, add all folders from file system
+    // Note: folders from backend are already relative to the root
     console.log('MoveToFolderModal: Processing', folders.length, 'folders from file system')
     folders.forEach(folder => {
-      const pathParts = folder.path.split('/').filter(part => part !== '')
-      const relativeParts = pathParts.slice(commonRoot.length)
+      const relativeParts = folder.path.split('/').filter(part => part !== '')
 
       if (relativeParts.length === 0) return // Skip root
 

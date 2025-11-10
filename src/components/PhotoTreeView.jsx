@@ -55,9 +55,9 @@ export default function PhotoTreeView({ photos, folders = [], onPhotoClick, sele
     console.log('PhotoTreeView: commonRoot is', commonRoot)
 
     // First, add all folders from file system
+    // Note: folders from backend are already relative to the root
     folders.forEach(folder => {
-      const pathParts = folder.path.split('/').filter(part => part !== '')
-      const relativeParts = pathParts.slice(commonRoot.length)
+      const relativeParts = folder.path.split('/').filter(part => part !== '')
 
       if (relativeParts.length === 0) return // Skip root
 

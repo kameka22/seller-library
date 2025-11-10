@@ -246,6 +246,7 @@
     "cropArea": "Zone de recadrage",
     "copyCreated": "Une copie sera créée avec le nom",
     "noPhotosInCollection": "Aucune photo dans la collection",
+    "emptyFolder": "Pas de fichier dans ce dossier",
     "scanDirectory": "Scannez un répertoire pour importer des photos",
     "activeToken": "Token d'accès actif",
     "expiresOn": "Expire le",

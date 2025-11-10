@@ -246,6 +246,7 @@
     "cropArea": "Crop area",
     "copyCreated": "A copy will be created with name",
     "noPhotosInCollection": "No photos in collection",
+    "emptyFolder": "No files in this folder",
     "scanDirectory": "Scan a directory to import photos",
     "activeToken": "Active access token",
     "expiresOn": "Expires on",

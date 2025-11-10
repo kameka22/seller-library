@@ -49,7 +49,6 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
 
     // First, add all folders from file system
     // Note: folders from backend are already relative to the root
-    console.log('MoveToFolderModal: Processing', folders.length, 'folders from file system')
     folders.forEach(folder => {
       const relativeParts = folder.path.split('/').filter(part => part !== '')
 
@@ -110,7 +109,6 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
       })
     })
 
-    console.log('MoveToFolderModal: Built tree with', Object.keys(tree.folders).length, 'root folders')
     return tree
   }, [photos, folders, createdFolders])
 
@@ -145,22 +143,16 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
       const fullPath = [...folderTree.commonRoot, ...currentPath, newFolderName].join('/')
       const fullPathWithSlash = '/' + fullPath
 
-      console.log('Creating folder at:', fullPathWithSlash)
-
       // Create folder on file system immediately
       await photosAPI.createFolder(fullPathWithSlash)
-
-      console.log('Folder created successfully, adding to local state')
 
       // Add to created folders list to make it visible in the tree
       setCreatedFolders([...createdFolders, fullPath])
 
       // Notify parent to reload photos
-      console.log('Calling onFolderCreated to reload')
       if (onFolderCreated) {
         await onFolderCreated()
       }
-      console.log('Reload completed')
 
       // Navigate to the new folder after creation
       setCurrentPath([...currentPath, newFolderName])

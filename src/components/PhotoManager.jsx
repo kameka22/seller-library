@@ -99,9 +99,7 @@ export default function PhotoManager() {
           }
 
           const rootPath = '/' + rootParts.join('/')
-          console.log('Scanning folder structure from root:', rootPath)
           const folderStructure = await photosAPI.scanFolderStructure(rootPath)
-          console.log('Folder structure loaded:', folderStructure.folders?.length || 0, 'folders')
           setFolders(folderStructure.folders || [])
         } catch (folderErr) {
           console.error('Error loading folder structure:', folderErr)
@@ -194,10 +192,11 @@ export default function PhotoManager() {
       // Delete folders
       for (const folderId of folders) {
         const folderPath = folderId.replace('folder-', '')
+        const absolutePath = '/' + folderPath
         try {
           const result = deletePhysicalFiles
-            ? await photosAPI.deleteFolder(folderPath)
-            : await photosAPI.deleteFolderDbOnly(folderPath)
+            ? await photosAPI.deleteFolder(absolutePath)
+            : await photosAPI.deleteFolderDbOnly(absolutePath)
           deletedCount += result.deleted
           if (result.errors && result.errors.length > 0) {
             errors = errors.concat(result.errors)
@@ -346,7 +345,6 @@ export default function PhotoManager() {
       setError(null)
 
       const result = await photosAPI.moveItems(photoIds, folders, destinationPath)
-      console.log('Move result:', result)
 
       // Close modal first
       setShowMoveModal(false)

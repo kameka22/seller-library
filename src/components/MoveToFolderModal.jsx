@@ -62,7 +62,17 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
   // Navigate to current folder
   const getCurrentFolder = () => {
     let current = folderTree
-    currentPath.forEach(folderName => {
+    currentPath.forEach((folderName, index) => {
+      // Create folder if it doesn't exist (for newly created folders)
+      if (!current.folders[folderName]) {
+        const pathSoFar = currentPath.slice(0, index + 1)
+        current.folders[folderName] = {
+          folders: {},
+          photos: [],
+          fullPath: [...folderTree.commonRoot, ...pathSoFar].join('/'),
+          name: folderName
+        }
+      }
       current = current.folders[folderName]
     })
     return current

@@ -52,6 +52,7 @@ async fn main() {
             commands::list_folders,
             commands::create_folder,
             commands::delete_folder_from_db,
+            commands::sync_database,
             updater::check_for_updates,
             updater::download_and_install_update,
         ])

@@ -219,7 +219,8 @@
     "scanningError": "Erreur lors du scan du répertoire",
     "deletingError": "Erreur lors de la suppression",
     "rescanError": "Erreur lors du rescan du répertoire",
-    "cannotDetermineDirectory": "Impossible de déterminer le répertoire à rescanner"
+    "cannotDetermineDirectory": "Impossible de déterminer le répertoire à rescanner",
+    "syncError": "Erreur lors de la synchronisation de la base de données"
   },
   "placeholders": {
     "objectName": "Ex: Montre vintage",
@@ -355,6 +356,10 @@
     "moveSelection": "Déplacer la sélection",
     "movingItems": "Déplacement en cours...",
     "moveSuccess": "Déplacement réussi",
-    "moveError": "Erreur lors du déplacement"
+    "moveError": "Erreur lors du déplacement",
+    "syncDatabase": "Synchroniser",
+    "photosRemoved": "photo(s) supprimée(s)",
+    "photosUpdated": "photo(s) mise(s) à jour",
+    "foldersRemoved": "dossier(s) supprimé(s)"
   }
 }

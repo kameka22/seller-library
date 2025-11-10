@@ -219,7 +219,8 @@
     "scanningError": "Error scanning directory",
     "deletingError": "Error deleting items",
     "rescanError": "Error rescanning directory",
-    "cannotDetermineDirectory": "Cannot determine directory to rescan"
+    "cannotDetermineDirectory": "Cannot determine directory to rescan",
+    "syncError": "Error synchronizing database"
   },
   "placeholders": {
     "objectName": "Ex: Vintage watch",
@@ -355,6 +356,10 @@
     "moveSelection": "Move selection",
     "movingItems": "Moving items...",
     "moveSuccess": "Move successful",
-    "moveError": "Error moving items"
+    "moveError": "Error moving items",
+    "syncDatabase": "Sync",
+    "photosRemoved": "photo(s) removed",
+    "photosUpdated": "photo(s) updated",
+    "foldersRemoved": "folder(s) removed"
   }
 }

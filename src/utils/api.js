@@ -111,6 +111,11 @@ export const photosAPI = {
   deleteFolderFromDb: async (folderId) => {
     return await invoke('delete_folder_from_db', { folderId })
   },
+
+  // Synchroniser la base de données avec le système de fichiers
+  syncDatabase: async () => {
+    return await invoke('sync_database')
+  },
 }
 
 // ========== PLATFORMS API ==========

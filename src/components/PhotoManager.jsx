@@ -113,6 +113,39 @@ export default function PhotoManager() {
     }
   }
 
+  const handleSyncDatabase = async () => {
+    try {
+      setScanning(true)
+      setError(null)
+      const result = await photosAPI.syncDatabase()
+      await loadPhotos()
+
+      const messages = []
+      if (result.photos_removed > 0) {
+        messages.push(`${result.photos_removed} ${t('ui.photosRemoved')}`)
+      }
+      if (result.photos_updated > 0) {
+        messages.push(`${result.photos_updated} ${t('ui.photosUpdated')}`)
+      }
+      if (result.folders_cleaned > 0) {
+        messages.push(`${result.folders_cleaned} ${t('ui.foldersRemoved')}`)
+      }
+
+      if (messages.length > 0) {
+        setError(messages.join(', '))
+      }
+
+      if (result.errors && result.errors.length > 0) {
+        console.error('Sync errors:', result.errors)
+      }
+    } catch (err) {
+      console.error('Error syncing database:', err)
+      setError(t('photoManager.syncError'))
+    } finally {
+      setScanning(false)
+    }
+  }
+
   const handleToggleSelect = (itemId, action, photosInFolder) => {
     if (action === 'select-all' && photosInFolder) {
       // Select folder and all its photos
@@ -371,6 +404,16 @@ export default function PhotoManager() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
           {t('common.refresh')}
+        </button>
+        <button
+          onClick={handleSyncDatabase}
+          disabled={scanning}
+          className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors whitespace-nowrap flex items-center gap-2 disabled:bg-green-400"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          {t('ui.syncDatabase')}
         </button>
         <button
           onClick={handleScanDirectory}

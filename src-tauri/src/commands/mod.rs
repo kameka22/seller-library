@@ -1343,6 +1343,103 @@ pub async fn delete_folder_from_db(
     Ok(())
 }
 
+// ========== DATABASE SYNC COMMAND ==========
+
+#[derive(Serialize)]
+pub struct SyncDatabaseResult {
+    pub photos_removed: i32,
+    pub photos_updated: i32,
+    pub folders_cleaned: i32,
+    pub errors: Vec<String>,
+}
+
+#[tauri::command]
+pub async fn sync_database(pool: State<'_, SqlitePool>) -> Result<SyncDatabaseResult, String> {
+    let mut photos_removed = 0;
+    let mut photos_updated = 0;
+    let mut folders_cleaned = 0;
+    let mut errors = Vec::new();
+
+    // Get all photos from database
+    let photos = sqlx::query_as::<_, Photo>("SELECT * FROM photos")
+        .fetch_all(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Check each photo
+    for photo in photos {
+        let photo_path = Path::new(&photo.file_path);
+
+        if !photo_path.exists() {
+            // Photo file doesn't exist, remove from database
+            match sqlx::query("DELETE FROM photos WHERE id = ?")
+                .bind(photo.id)
+                .execute(pool.inner())
+                .await
+            {
+                Ok(_) => photos_removed += 1,
+                Err(e) => errors.push(format!("Failed to remove photo {}: {}", photo.id, e)),
+            }
+        } else {
+            // Photo exists, ensure folder_id is correct
+            if let Some(parent) = photo_path.parent() {
+                let folder_path = parent.to_string_lossy().to_string();
+
+                match ensure_folder_in_db(pool.inner(), &folder_path).await {
+                    Ok(folder_id) => {
+                        // Update photo's folder_id if different
+                        if photo.folder_id != Some(folder_id) {
+                            match sqlx::query("UPDATE photos SET folder_id = ? WHERE id = ?")
+                                .bind(folder_id)
+                                .bind(photo.id)
+                                .execute(pool.inner())
+                                .await
+                            {
+                                Ok(_) => photos_updated += 1,
+                                Err(e) => errors.push(format!("Failed to update photo {}: {}", photo.id, e)),
+                            }
+                        }
+                    }
+                    Err(e) => errors.push(format!("Failed to ensure folder for photo {}: {}", photo.id, e)),
+                }
+            }
+        }
+    }
+
+    // Clean up empty folders (folders with no photos)
+    let empty_folders = sqlx::query_as::<_, Folder>(
+        "SELECT f.* FROM folders f
+         LEFT JOIN photos p ON p.folder_id = f.id
+         WHERE p.id IS NULL"
+    )
+    .fetch_all(pool.inner())
+    .await
+    .map_err(|e| e.to_string())?;
+
+    for folder in empty_folders {
+        let folder_path = Path::new(&folder.path);
+
+        // Only delete from DB if folder doesn't exist on filesystem
+        if !folder_path.exists() {
+            match sqlx::query("DELETE FROM folders WHERE id = ?")
+                .bind(folder.id)
+                .execute(pool.inner())
+                .await
+            {
+                Ok(_) => folders_cleaned += 1,
+                Err(e) => errors.push(format!("Failed to clean folder {}: {}", folder.id, e)),
+            }
+        }
+    }
+
+    Ok(SyncDatabaseResult {
+        photos_removed,
+        photos_updated,
+        folders_cleaned,
+        errors,
+    })
+}
+
 // Helper function to ensure a folder exists in the database
 async fn ensure_folder_in_db(pool: &SqlitePool, folder_path: &str) -> Result<i64, String> {
     // Check if folder already exists
@@ -1366,7 +1463,11 @@ async fn ensure_folder_in_db(pool: &SqlitePool, folder_path: &str) -> Result<i64
         .unwrap_or("")
         .to_string();
 
-    // Insert new folder
+    // Insert new folder (only if it exists on filesystem)
+    if !path_obj.exists() {
+        return Err(format!("Folder does not exist: {}", folder_path));
+    }
+
     let result = sqlx::query(
         "INSERT INTO folders (path, name, parent_id) VALUES (?, ?, NULL)"
     )

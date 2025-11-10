@@ -7,7 +7,7 @@ import 'react-contexify/dist/ReactContexify.css'
 const PHOTO_MENU_ID = 'photo-context-menu'
 const FOLDER_MENU_ID = 'folder-context-menu'
 
-export default function PhotoTreeView({ photos, onPhotoClick, selectedItems = [], onToggleSelect, currentPath = [], onPathChange, onSelectAll, onEditPhoto, onDeleteItems, onMoveItems }) {
+export default function PhotoTreeView({ photos, folders = [], onPhotoClick, selectedItems = [], onToggleSelect, currentPath = [], onPathChange, onSelectAll, onEditPhoto, onDeleteItems, onMoveItems }) {
   const { t } = useLanguage()
 
   const { show: showPhotoMenu } = useContextMenu({ id: PHOTO_MENU_ID })
@@ -51,6 +51,27 @@ export default function PhotoTreeView({ photos, onPhotoClick, selectedItems = []
   const fileTree = useMemo(() => {
     const tree = { folders: {}, photos: [] }
 
+    // First, add all folders from file system
+    folders.forEach(folder => {
+      const pathParts = folder.path.split('/').filter(part => part !== '')
+      const relativeParts = pathParts.slice(commonRoot.length)
+
+      if (relativeParts.length === 0) return // Skip root
+
+      let current = tree
+      relativeParts.forEach((part, index) => {
+        if (!current.folders[part]) {
+          current.folders[part] = {
+            folders: {},
+            photos: [],
+            fullPath: [...commonRoot, ...relativeParts.slice(0, index + 1)].join('/')
+          }
+        }
+        current = current.folders[part]
+      })
+    })
+
+    // Then, add photos to their respective folders
     photos.forEach(photo => {
       const pathParts = photo.original_path.split('/').filter(part => part !== '')
       const fileName = pathParts.pop()
@@ -74,7 +95,7 @@ export default function PhotoTreeView({ photos, onPhotoClick, selectedItems = []
     })
 
     return tree
-  }, [photos, commonRoot])
+  }, [photos, folders, commonRoot])
 
   // Navigate tree
   const getCurrentFolder = () => {

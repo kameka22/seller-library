@@ -1280,3 +1280,72 @@ pub async fn create_folder(
 
     Ok(request.folder_path)
 }
+
+#[derive(Deserialize)]
+pub struct ScanFolderStructureRequest {
+    pub root_path: String,
+}
+
+#[derive(Serialize)]
+pub struct FolderInfo {
+    pub path: String,
+    pub name: String,
+    pub has_subfolders: bool,
+}
+
+#[derive(Serialize)]
+pub struct ScanFolderStructureResult {
+    pub folders: Vec<FolderInfo>,
+}
+
+fn scan_folders_recursive(root: &Path, base: &Path) -> Result<Vec<FolderInfo>, String> {
+    let mut folders = Vec::new();
+
+    if !root.exists() || !root.is_dir() {
+        return Ok(folders);
+    }
+
+    let entries = fs::read_dir(root)
+        .map_err(|e| format!("Failed to read directory {}: {}", root.display(), e))?;
+
+    for entry in entries {
+        if let Ok(entry) = entry {
+            let path = entry.path();
+            if path.is_dir() {
+                // Check if this folder has subfolders
+                let has_subfolders = fs::read_dir(&path)
+                    .map(|entries| entries.filter_map(|e| e.ok()).any(|e| e.path().is_dir()))
+                    .unwrap_or(false);
+
+                let relative_path = path.strip_prefix(base)
+                    .map_err(|e| format!("Failed to get relative path: {}", e))?;
+
+                folders.push(FolderInfo {
+                    path: format!("/{}", relative_path.to_string_lossy().replace("\\", "/")),
+                    name: path.file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    has_subfolders,
+                });
+
+                // Recursively scan subfolders
+                let subfolders = scan_folders_recursive(&path, base)?;
+                folders.extend(subfolders);
+            }
+        }
+    }
+
+    Ok(folders)
+}
+
+#[tauri::command]
+pub async fn scan_folder_structure(
+    request: ScanFolderStructureRequest,
+) -> Result<ScanFolderStructureResult, String> {
+    let root_path = Path::new(&request.root_path);
+
+    let folders = scan_folders_recursive(root_path, root_path)?;
+
+    Ok(ScanFolderStructureResult { folders })
+}

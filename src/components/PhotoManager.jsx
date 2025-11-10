@@ -10,6 +10,7 @@ import { useLanguage } from '../contexts/LanguageContext'
 export default function PhotoManager() {
   const { t } = useLanguage()
   const [photos, setPhotos] = useState([])
+  const [folders, setFolders] = useState([]) // Real-time folder structure from file system
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedPhoto, setSelectedPhoto] = useState(null)
@@ -70,6 +71,45 @@ export default function PhotoManager() {
       setLoading(true)
       const data = await photosAPI.list()
       setPhotos(data)
+
+      // Load folder structure if we have photos
+      if (data && data.length > 0) {
+        try {
+          // Get the common root from photos to scan
+          const paths = data.map(p => p.original_path.split('/').filter(part => part !== ''))
+          let rootParts = paths[0]
+
+          if (paths.length === 1) {
+            rootParts = [...paths[0]]
+            rootParts.pop() // Remove filename
+          } else {
+            for (let i = 1; i < paths.length; i++) {
+              const currentPathArr = paths[i]
+              const newCommon = []
+              for (let j = 0; j < Math.min(rootParts.length, currentPathArr.length - 1); j++) {
+                if (rootParts[j] === currentPathArr[j]) {
+                  newCommon.push(rootParts[j])
+                } else {
+                  break
+                }
+              }
+              rootParts = newCommon
+              if (rootParts.length === 0) break
+            }
+          }
+
+          const rootPath = '/' + rootParts.join('/')
+          const folderStructure = await photosAPI.scanFolderStructure(rootPath)
+          setFolders(folderStructure.folders || [])
+        } catch (folderErr) {
+          console.error('Error loading folder structure:', folderErr)
+          // Don't show error, just continue without folder structure
+          setFolders([])
+        }
+      } else {
+        setFolders([])
+      }
+
       setError(null)
     } catch (err) {
       console.error('Error loading photos:', err)
@@ -416,6 +456,7 @@ export default function PhotoManager() {
       <div className="bg-white rounded-lg shadow p-6">
         <PhotoTreeView
           photos={filteredPhotos}
+          folders={folders}
           onPhotoClick={setSelectedPhoto}
           selectedItems={selectedItems}
           onToggleSelect={handleToggleSelect}

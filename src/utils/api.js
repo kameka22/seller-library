@@ -101,6 +101,15 @@ export const photosAPI = {
       }
     })
   },
+
+  // Scanner la structure des dossiers
+  scanFolderStructure: async (rootPath) => {
+    return await invoke('scan_folder_structure', {
+      request: {
+        root_path: rootPath
+      }
+    })
+  },
 }
 
 // ========== PLATFORMS API ==========

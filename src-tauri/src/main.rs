@@ -50,6 +50,7 @@ async fn main() {
             commands::import_photos,
             commands::move_photos_and_folders,
             commands::create_folder,
+            commands::scan_folder_structure,
             updater::check_for_updates,
             updater::download_and_install_update,
         ])

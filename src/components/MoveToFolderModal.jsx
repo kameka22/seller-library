@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { photosAPI } from '../utils/api'
 
-export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, selectedItems }) {
+export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, selectedItems, onFolderCreated }) {
   const { t } = useLanguage()
   const [currentPath, setCurrentPath] = useState([])
   const [isCreatingFolder, setIsCreatingFolder] = useState(false)
@@ -92,6 +92,11 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
 
       // Create folder on file system immediately
       await photosAPI.createFolder('/' + fullPath)
+
+      // Notify parent to reload photos
+      if (onFolderCreated) {
+        await onFolderCreated()
+      }
 
       // Navigate to the new folder after creation
       setCurrentPath([...currentPath, newFolderName])

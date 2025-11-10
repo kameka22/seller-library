@@ -542,6 +542,7 @@ export default function PhotoManager() {
         onConfirm={confirmMove}
         photos={photos}
         selectedItems={selectedItems}
+        onFolderCreated={loadPhotos}
       />
     </div>
   )

@@ -50,7 +50,7 @@ struct PlatformInfo {
 pub async fn check_for_updates() -> Result<Option<UpdateInfo>, String> {
     println!("Checking for updates...");
 
-    // Utiliser l'API GitHub pour récupérer la dernière release
+    // Use the GitHub API to fetch the latest release
     let api_url = format!(
         "https://api.github.com/repos/{}/releases/latest",
         GITHUB_REPO
@@ -62,7 +62,7 @@ pub async fn check_for_updates() -> Result<Option<UpdateInfo>, String> {
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
-    // 1. Récupérer la dernière release depuis l'API GitHub
+    // 1. Fetch the latest release from the GitHub API
     let release_response = match client.get(&api_url).send().await {
         Ok(resp) => resp,
         Err(e) => {
@@ -89,7 +89,7 @@ pub async fn check_for_updates() -> Result<Option<UpdateInfo>, String> {
 
     println!("Latest release tag: {}", github_release.tag_name);
 
-    // 2. Chercher le fichier latest.json dans les assets
+    // 2. Search for the latest.json file in the assets
     let latest_json_asset = github_release
         .assets
         .iter()
@@ -103,7 +103,7 @@ pub async fn check_for_updates() -> Result<Option<UpdateInfo>, String> {
     let latest_json_url = &latest_json_asset.unwrap().browser_download_url;
     println!("Downloading latest.json from: {}", latest_json_url);
 
-    // 3. Télécharger et parser le latest.json
+    // 3. Download and parse the latest.json
     let latest_response = match client.get(latest_json_url).send().await {
         Ok(resp) => resp,
         Err(e) => {
@@ -128,14 +128,14 @@ pub async fn check_for_updates() -> Result<Option<UpdateInfo>, String> {
         }
     };
 
-    // Comparer les versions
+    // Compare the versions
     let current = semver::Version::parse(CURRENT_VERSION)
         .map_err(|e| format!("Invalid current version: {}", e))?;
     let remote = semver::Version::parse(&latest.version)
         .map_err(|e| format!("Invalid remote version: {}", e))?;
 
     if remote > current {
-        // Déterminer l'architecture
+        // Determine the architecture
         let platform_info = if cfg!(target_arch = "aarch64") {
             latest.platforms.darwin_aarch64
         } else {
@@ -162,7 +162,7 @@ pub async fn check_for_updates() -> Result<Option<UpdateInfo>, String> {
 pub async fn download_and_install_update(download_url: String) -> Result<(), String> {
     println!("Starting update download from: {}", download_url);
 
-    // Télécharger le fichier
+    // Download the file
     let client = reqwest::Client::builder()
         .user_agent("seller-library-updater")
         .timeout(std::time::Duration::from_secs(300))
@@ -187,7 +187,7 @@ pub async fn download_and_install_update(download_url: String) -> Result<(), Str
         .await
         .map_err(|e| format!("Failed to read response: {}", e))?;
 
-    // Créer un fichier temporaire
+    // Create a temporary file
     let temp_dir = std::env::temp_dir();
     let temp_file = temp_dir.join("seller-library-update.tar.gz");
 
@@ -199,7 +199,7 @@ pub async fn download_and_install_update(download_url: String) -> Result<(), Str
 
     println!("Update downloaded to: {:?}", temp_file);
 
-    // Extraire l'archive
+    // Extract the archive
     let extract_dir = temp_dir.join("seller-library-update");
     if extract_dir.exists() {
         fs::remove_dir_all(&extract_dir)
@@ -217,7 +217,7 @@ pub async fn download_and_install_update(download_url: String) -> Result<(), Str
 
     println!("Update extracted to: {:?}", extract_dir);
 
-    // Trouver le fichier .app dans le dossier extrait
+    // Find the .app file in the extracted folder
     let app_name = "Seller Library.app";
     let new_app_path = extract_dir.join(app_name);
 
@@ -228,11 +228,11 @@ pub async fn download_and_install_update(download_url: String) -> Result<(), Str
         ));
     }
 
-    // Obtenir le chemin de l'application actuelle
+    // Get the current application path
     let current_exe =
         std::env::current_exe().map_err(|e| format!("Failed to get current exe path: {}", e))?;
 
-    // Remonter jusqu'au .app (current_exe est dans Contents/MacOS/seller-library)
+    // Go up to the .app (current_exe is in Contents/MacOS/seller-library)
     let current_app = current_exe
         .parent() // MacOS
         .and_then(|p| p.parent()) // Contents
@@ -242,7 +242,7 @@ pub async fn download_and_install_update(download_url: String) -> Result<(), Str
     println!("Current app path: {:?}", current_app);
     println!("New app path: {:?}", new_app_path);
 
-    // Créer un script shell pour remplacer l'application et la relancer
+    // Create a shell script to replace the application and restart it
     let script = format!(
         r#"#!/bin/bash
 sleep 2
@@ -260,7 +260,7 @@ open "{}"
     fs::write(&script_path, script)
         .map_err(|e| format!("Failed to create update script: {}", e))?;
 
-    // Rendre le script exécutable
+    // Make the script executable
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -272,12 +272,12 @@ open "{}"
             .map_err(|e| format!("Failed to set script permissions: {}", e))?;
     }
 
-    // Lancer le script en arrière-plan et quitter l'application
+    // Launch the script in the background and quit the application
     Command::new("sh")
         .arg(&script_path)
         .spawn()
         .map_err(|e| format!("Failed to launch update script: {}", e))?;
 
-    // Quitter l'application (le script la relancera)
+    // Quit the application (the script will restart it)
     std::process::exit(0);
 }

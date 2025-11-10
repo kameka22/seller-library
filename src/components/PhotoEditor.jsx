@@ -57,15 +57,15 @@ export default function PhotoEditor({ photo, onClose, onSave }) {
     const ctx = canvas.getContext('2d', { willReadFrequently: true })
     const img = imageRef.current
 
-    // Créer un canvas temporaire pour les transformations
+    // Create temporary canvas for transformations
     const tempCanvas = document.createElement('canvas')
     const tempCtx = tempCanvas.getContext('2d')
 
-    // Calculer les dimensions avec le scale
+    // Calculate dimensions with scale
     const scaledWidth = Math.round((img.width * scale) / 100)
     const scaledHeight = Math.round((img.height * scale) / 100)
 
-    // Définir les dimensions du canvas temporaire selon la rotation
+    // Set temporary canvas dimensions according to rotation
     if (rotation === 90 || rotation === 270) {
       tempCanvas.width = scaledHeight
       tempCanvas.height = scaledWidth
@@ -74,7 +74,7 @@ export default function PhotoEditor({ photo, onClose, onSave }) {
       tempCanvas.height = scaledHeight
     }
 
-    // Appliquer la rotation
+    // Apply rotation
     tempCtx.save()
     if (rotation === 90) {
       tempCtx.translate(tempCanvas.width, 0)
@@ -93,7 +93,7 @@ export default function PhotoEditor({ photo, onClose, onSave }) {
     }
     tempCtx.restore()
 
-    // Appliquer luminosité et contraste
+    // Apply brightness and contrast
     if (brightness !== 100 || contrast !== 100) {
       const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height)
       const data = imageData.data
@@ -118,12 +118,12 @@ export default function PhotoEditor({ photo, onClose, onSave }) {
       tempCtx.putImageData(imageData, 0, 0)
     }
 
-    // Copier sur le canvas principal
+    // Copy to main canvas
     canvas.width = tempCanvas.width
     canvas.height = tempCanvas.height
     ctx.drawImage(tempCanvas, 0, 0)
 
-    // Générer l'URL de l'image transformée pour ReactCrop
+    // Generate transformed image URL for ReactCrop
     const dataUrl = tempCanvas.toDataURL('image/png')
     setTransformedImageUrl(dataUrl)
   }
@@ -135,7 +135,7 @@ export default function PhotoEditor({ photo, onClose, onSave }) {
   const confirmSave = async () => {
     let canvas = canvasRef.current
 
-    // Si un crop a été appliqué, créer un nouveau canvas avec le crop
+    // If crop was applied, create new canvas with crop
     if (completedCrop && cropImageRef.current) {
       const cropCanvas = document.createElement('canvas')
       const cropCtx = cropCanvas.getContext('2d')
@@ -205,25 +205,25 @@ export default function PhotoEditor({ photo, onClose, onSave }) {
 
     const cropImage = cropImageRef.current
 
-    // Créer un canvas temporaire pour le crop
+    // Create temporary canvas for crop
     const tempCanvas = document.createElement('canvas')
     const tempCtx = tempCanvas.getContext('2d')
 
-    // Calculer le ratio entre l'image naturelle et sa taille affichée
+    // Calculate ratio between natural image and displayed size
     const scaleX = cropImage.naturalWidth / cropImage.width
     const scaleY = cropImage.naturalHeight / cropImage.height
 
-    // Calculer les dimensions réelles du crop
+    // Calculate actual crop dimensions
     const cropX = completedCrop.x * scaleX
     const cropY = completedCrop.y * scaleY
     const cropWidth = completedCrop.width * scaleX
     const cropHeight = completedCrop.height * scaleY
 
-    // Redimensionner le canvas temporaire pour la zone croppée
+    // Resize temporary canvas for cropped area
     tempCanvas.width = cropWidth
     tempCanvas.height = cropHeight
 
-    // Dessiner la zone croppée sur le canvas temporaire
+    // Draw cropped area on temporary canvas
     tempCtx.drawImage(
       cropImage,
       cropX,
@@ -236,15 +236,15 @@ export default function PhotoEditor({ photo, onClose, onSave }) {
       cropHeight
     )
 
-    // Générer la nouvelle URL de l'image croppée
+    // Generate new cropped image URL
     const newUrl = tempCanvas.toDataURL('image/png')
     setTransformedImageUrl(newUrl)
 
-    // Mettre à jour imageRef pour les prochaines transformations
+    // Update imageRef for next transformations
     const img = new Image()
     img.onload = () => {
       imageRef.current = img
-      // Appliquer les transformations sur le canvas principal
+      // Apply transformations on main canvas
       setTimeout(() => {
         if (canvasRef.current) {
           applyTransformations()
@@ -357,10 +357,10 @@ export default function PhotoEditor({ photo, onClose, onSave }) {
                 {/* Crop Info */}
                 {isCropping && completedCrop && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <div className="text-sm font-medium text-green-900 mb-2">Zone de recadrage</div>
+                    <div className="text-sm font-medium text-green-900 mb-2">{t('ui.cropArea')}</div>
                     <div className="text-xs text-gray-600 space-y-1">
-                      <div>Position: {Math.round(completedCrop.x)}, {Math.round(completedCrop.y)}</div>
-                      <div>Taille: {Math.round(completedCrop.width)} × {Math.round(completedCrop.height)}</div>
+                      <div>{t('ui.position')}: {Math.round(completedCrop.x)}, {Math.round(completedCrop.y)}</div>
+                      <div>{t('ui.size')}: {Math.round(completedCrop.width)} × {Math.round(completedCrop.height)}</div>
                     </div>
                   </div>
                 )}
@@ -370,7 +370,7 @@ export default function PhotoEditor({ photo, onClose, onSave }) {
                   <div>
                     <div className="flex justify-between items-center mb-2">
                       <label className="text-sm font-medium text-gray-700">
-                        Taille
+                        {t('ui.size')}
                       </label>
                       <span className="text-sm text-gray-600 font-semibold">{scale}%</span>
                     </div>
@@ -390,7 +390,7 @@ export default function PhotoEditor({ photo, onClose, onSave }) {
                   <div>
                     <div className="flex justify-between items-center mb-2">
                       <label className="text-sm font-medium text-gray-700">
-                        Luminosité
+                        {t('photoEditor.brightness')}
                       </label>
                       <span className="text-sm text-gray-600 font-semibold">{brightness}%</span>
                     </div>
@@ -410,7 +410,7 @@ export default function PhotoEditor({ photo, onClose, onSave }) {
                   <div>
                     <div className="flex justify-between items-center mb-2">
                       <label className="text-sm font-medium text-gray-700">
-                        Contraste
+                        {t('photoEditor.contrast')}
                       </label>
                       <span className="text-sm text-gray-600 font-semibold">{contrast}%</span>
                     </div>
@@ -431,7 +431,7 @@ export default function PhotoEditor({ photo, onClose, onSave }) {
                       onClick={handleReset}
                       className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
                     >
-                      Réinitialiser
+                      {t('ui.reset')}
                     </button>
                   </div>
                 )}
@@ -444,13 +444,13 @@ export default function PhotoEditor({ photo, onClose, onSave }) {
                     onClick={handleSaveClick}
                     className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
                   >
-                    Enregistrer
+                    {t('common.save')}
                   </button>
                   <button
                     onClick={onClose}
                     className="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors"
                   >
-                    Annuler
+                    {t('common.cancel')}
                   </button>
                 </div>
               )}
@@ -464,22 +464,22 @@ export default function PhotoEditor({ photo, onClose, onSave }) {
         isOpen={showSaveModal}
         onClose={() => setShowSaveModal(false)}
         onConfirm={confirmSave}
-        title="Enregistrer les modifications"
-        message="Comment souhaitez-vous enregistrer les modifications ?"
-        confirmText="Enregistrer"
-        cancelText="Annuler"
+        title={t('ui.saveChanges')}
+        message={t('ui.howToSaveChanges')}
+        confirmText={t('common.save')}
+        cancelText={t('common.cancel')}
         danger={false}
       >
         <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <label htmlFor="create-copy" className="text-sm font-medium text-gray-900 block">
-                Créer une copie
+                {t('ui.createCopy')}
               </label>
               <p className="text-xs text-gray-500 mt-1">
                 {createCopy
-                  ? 'Une copie sera créée avec le nom "' + photo.file_name.replace(/(\.[^.]+)$/, ' (x)$1') + '"'
-                  : 'La photo originale sera modifiée définitivement'}
+                  ? t('ui.copyWillBeCreated', { filename: photo.file_name.replace(/(\.[^.]+)$/, ' (x)$1') })
+                  : t('ui.originalWillBeModified')}
               </p>
             </div>
             <button

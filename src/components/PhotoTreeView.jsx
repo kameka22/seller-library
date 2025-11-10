@@ -1,22 +1,24 @@
 import { useMemo } from 'react'
 import { convertFileSrc } from '@tauri-apps/api/tauri'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function PhotoTreeView({ photos, onPhotoClick, selectedItems = [], onToggleSelect, currentPath = [], onPathChange, onSelectAll }) {
+  const { t } = useLanguage()
 
-  // Trouver le préfixe commun de tous les chemins (racine commune)
+  // Find common prefix of all paths (common root)
   const commonRoot = useMemo(() => {
     if (photos.length === 0) return ''
 
     const paths = photos.map(p => p.original_path.split('/').filter(part => part !== ''))
 
     if (paths.length === 1) {
-      // Une seule photo, retourner son dossier parent
+      // Single photo, return its parent folder
       const pathParts = [...paths[0]]
-      pathParts.pop() // Enlever le nom du fichier
+      pathParts.pop() // Remove file name
       return pathParts
     }
 
-    // Trouver le préfixe commun
+    // Find common prefix
     let commonParts = paths[0]
     for (let i = 1; i < paths.length; i++) {
       const currentPath = paths[i]
@@ -37,7 +39,7 @@ export default function PhotoTreeView({ photos, onPhotoClick, selectedItems = []
     return commonParts
   }, [photos])
 
-  // Organiser les photos par dossiers (relatif à la racine commune)
+  // Organize photos by folders (relative to common root)
   const fileTree = useMemo(() => {
     const tree = { folders: {}, photos: [] }
 
@@ -45,7 +47,7 @@ export default function PhotoTreeView({ photos, onPhotoClick, selectedItems = []
       const pathParts = photo.original_path.split('/').filter(part => part !== '')
       const fileName = pathParts.pop()
 
-      // Retirer le préfixe commun
+      // Remove common prefix
       const relativeParts = pathParts.slice(commonRoot.length)
 
       let current = tree
@@ -66,7 +68,7 @@ export default function PhotoTreeView({ photos, onPhotoClick, selectedItems = []
     return tree
   }, [photos, commonRoot])
 
-  // Naviguer dans l'arborescence
+  // Navigate tree
   const getCurrentFolder = () => {
     let current = fileTree
     currentPath.forEach(folderName => {
@@ -78,7 +80,7 @@ export default function PhotoTreeView({ photos, onPhotoClick, selectedItems = []
   const currentFolder = getCurrentFolder()
   const folderEntries = Object.entries(currentFolder.folders)
 
-  // Vérifier si tous les éléments du dossier actuel sont sélectionnés
+  // Check if all elements in current folder are selected
   const areAllSelected = () => {
     if (folderEntries.length === 0 && currentFolder.photos.length === 0) {
       return false
@@ -91,23 +93,23 @@ export default function PhotoTreeView({ photos, onPhotoClick, selectedItems = []
     return allIds.length > 0 && allIds.every(id => selectedItems.includes(id))
   }
 
-  // Gérer la sélection d'un dossier entier
+  // Handle selection of entire folder
   const handleFolderSelect = (folderName) => {
     const folder = currentFolder.folders[folderName]
     const allPhotosInFolder = getAllPhotosInFolder(folder)
 
-    // Utiliser le chemin complet du dossier (avec commonRoot)
+    // Use full folder path (with commonRoot)
     const fullFolderPath = folder.fullPath
 
-    // Vérifier si tous les items sont sélectionnés
+    // Check if all items are selected
     const allSelected = allPhotosInFolder.every(p => selectedItems.includes(`photo-${p.id}`)) &&
       selectedItems.includes(`folder-${fullFolderPath}`)
 
     if (allSelected) {
-      // Tout désélectionner
+      // Deselect all
       onToggleSelect(`folder-${fullFolderPath}`, 'deselect-all', allPhotosInFolder)
     } else {
-      // Tout sélectionner
+      // Select all
       onToggleSelect(`folder-${fullFolderPath}`, 'select-all', allPhotosInFolder)
     }
   }
@@ -135,22 +137,22 @@ export default function PhotoTreeView({ photos, onPhotoClick, selectedItems = []
         <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
-        <p className="mt-2">Aucune photo dans la collection</p>
-        <p className="text-sm mt-1">Scannez un répertoire pour importer des photos</p>
+        <p className="mt-2">{t('ui.noPhotosInCollection')}</p>
+        <p className="text-sm mt-1">{t('ui.scanDirectory')}</p>
       </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      {/* Fil d'Ariane */}
+      {/* Breadcrumb */}
       <div className="flex items-center justify-between gap-4 text-sm bg-gray-50 px-4 py-2 rounded-lg">
         <div className="flex items-center gap-2">
           <button
             onClick={() => onPathChange([])}
             className="text-blue-600 hover:text-blue-700 hover:underline"
           >
-            Racine
+            {t('ui.root')}
           </button>
           {currentPath.map((folder, index) => (
             <div key={index} className="flex items-center gap-2">
@@ -167,7 +169,7 @@ export default function PhotoTreeView({ photos, onPhotoClick, selectedItems = []
           ))}
         </div>
 
-        {/* Bouton Sélectionner tout / Déselectionner tout */}
+        {/* Select all / Deselect all button */}
         {(folderEntries.length > 0 || currentFolder.photos.length > 0) && onSelectAll && (
           <button
             onClick={onSelectAll}
@@ -177,15 +179,15 @@ export default function PhotoTreeView({ photos, onPhotoClick, selectedItems = []
                 : 'bg-blue-600 hover:bg-blue-700'
             }`}
           >
-            {areAllSelected() ? 'Déselectionner tout' : 'Sélectionner tout'}
+            {areAllSelected() ? t('ui.deselectAll') : t('ui.selectAll')}
           </button>
         )}
       </div>
 
-      {/* Liste des dossiers */}
+      {/* Folders list */}
       {folderEntries.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-gray-700 px-2">Dossiers</h3>
+          <h3 className="text-sm font-semibold text-gray-700 px-2">{t('ui.folders')}</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {folderEntries.map(([folderName, folder]) => {
               const photoCount = getAllPhotosInFolder(folder).length
@@ -198,7 +200,7 @@ export default function PhotoTreeView({ photos, onPhotoClick, selectedItems = []
                     selected ? 'border-blue-500 bg-blue-50' : 'border-transparent'
                   }`}
                 >
-                  {/* Checkbox de sélection */}
+                  {/* Selection checkbox */}
                   <div className="absolute top-2 left-2 z-10">
                     <input
                       type="checkbox"
@@ -209,7 +211,7 @@ export default function PhotoTreeView({ photos, onPhotoClick, selectedItems = []
                     />
                   </div>
 
-                  {/* Icône et nom du dossier */}
+                  {/* Folder icon and name */}
                   <div
                     className="cursor-pointer"
                     onClick={() => onPathChange([...currentPath, folderName])}
@@ -233,10 +235,10 @@ export default function PhotoTreeView({ photos, onPhotoClick, selectedItems = []
         </div>
       )}
 
-      {/* Liste des photos */}
+      {/* Photos list */}
       {currentFolder.photos.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-gray-700 px-2">Photos</h3>
+          <h3 className="text-sm font-semibold text-gray-700 px-2">{t('ui.photos')}</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {currentFolder.photos.map((photo) => {
               const selected = isPhotoSelected(photo.id)
@@ -262,7 +264,7 @@ export default function PhotoTreeView({ photos, onPhotoClick, selectedItems = []
                     }}
                   />
 
-                  {/* Checkbox de sélection */}
+                  {/* Selection checkbox */}
                   {onToggleSelect && (
                     <div className="absolute top-2 left-2 z-10">
                       <input

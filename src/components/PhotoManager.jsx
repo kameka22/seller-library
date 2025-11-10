@@ -4,8 +4,10 @@ import { open } from '@tauri-apps/api/dialog'
 import PhotoTreeView from './PhotoTreeView'
 import PhotoDetail from './PhotoDetail'
 import ConfirmModal from './ConfirmModal'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function PhotoManager() {
+  const { t } = useLanguage()
   const [photos, setPhotos] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -24,7 +26,7 @@ export default function PhotoManager() {
     loadPhotos()
   }, [])
 
-  // Calculer commonRoot depuis photos
+  // Calculate commonRoot from photos
   useEffect(() => {
     if (photos.length === 0) {
       setCommonRoot([])
@@ -68,7 +70,7 @@ export default function PhotoManager() {
       setError(null)
     } catch (err) {
       console.error('Error loading photos:', err)
-      setError('Erreur lors du chargement des photos')
+      setError(t('errors.loadingPhotos'))
     } finally {
       setLoading(false)
     }
@@ -79,7 +81,7 @@ export default function PhotoManager() {
       const selected = await open({
         directory: true,
         multiple: false,
-        title: 'Sélectionner un répertoire à scanner'
+        title: t('photoManager.scanningDirectory')
       })
 
       if (selected) {
@@ -89,12 +91,12 @@ export default function PhotoManager() {
         await loadPhotos()
 
         if (result.errors && result.errors.length > 0) {
-          setError(`${result.imported} photo(s) importée(s), ${result.errors.length} erreur(s) rencontrée(s)`)
+          setError(`${result.imported} ${t('ui.photoImported')}, ${result.errors.length} ${t('ui.errorEncountered')}`)
         }
       }
     } catch (err) {
       console.error('Error scanning directory:', err)
-      setError('Erreur lors du scan du répertoire')
+      setError(t('photoManager.scanningError'))
     } finally {
       setScanning(false)
     }
@@ -102,20 +104,20 @@ export default function PhotoManager() {
 
   const handleToggleSelect = (itemId, action, photosInFolder) => {
     if (action === 'select-all' && photosInFolder) {
-      // Sélectionner le dossier et toutes ses photos
+      // Select folder and all its photos
       setSelectedItems(prev => {
         const photoIds = photosInFolder.map(p => `photo-${p.id}`)
         const newSelection = new Set([...prev, itemId, ...photoIds])
         return Array.from(newSelection)
       })
     } else if (action === 'deselect-all' && photosInFolder) {
-      // Désélectionner le dossier et toutes ses photos
+      // Deselect folder and all its photos
       setSelectedItems(prev => {
         const photoIds = photosInFolder.map(p => `photo-${p.id}`)
         return prev.filter(id => id !== itemId && !photoIds.includes(id))
       })
     } else {
-      // Toggle simple pour une photo
+      // Simple toggle for a photo
       setSelectedItems(prev =>
         prev.includes(itemId)
           ? prev.filter(id => id !== itemId)
@@ -144,7 +146,7 @@ export default function PhotoManager() {
       let deletedCount = 0
       let errors = []
 
-      // Supprimer les dossiers
+      // Delete folders
       for (const folderId of folders) {
         const folderPath = folderId.replace('folder-', '')
         try {
@@ -156,11 +158,11 @@ export default function PhotoManager() {
             errors = errors.concat(result.errors)
           }
         } catch (err) {
-          errors.push(`Erreur dossier ${folderPath}: ${err}`)
+          errors.push(`Error folder ${folderPath}: ${err}`)
         }
       }
 
-      // Supprimer les photos individuelles
+      // Delete individual photos
       for (const photoId of photoIds) {
         try {
           if (deletePhysicalFiles) {
@@ -170,7 +172,7 @@ export default function PhotoManager() {
           }
           deletedCount++
         } catch (err) {
-          errors.push(`Erreur photo ${photoId}: ${err}`)
+          errors.push(`Error photo ${photoId}: ${err}`)
         }
       }
 
@@ -178,7 +180,7 @@ export default function PhotoManager() {
       setSelectedItems([])
     } catch (err) {
       console.error('Error deleting items:', err)
-      setError('Erreur lors de la suppression')
+      setError(t('photoManager.deletingError'))
     }
   }
 
@@ -187,11 +189,11 @@ export default function PhotoManager() {
   }
 
   const confirmRefresh = async () => {
-    // Construire le chemin complet du répertoire actuel
+    // Build full path of current directory
     const fullPath = [...commonRoot, ...currentPath].join('/')
 
     if (!fullPath) {
-      setError('Impossible de déterminer le répertoire à rescanner')
+      setError(t('photoManager.cannotDetermineDirectory'))
       return
     }
 
@@ -202,18 +204,18 @@ export default function PhotoManager() {
       await loadPhotos()
 
       if (result.errors && result.errors.length > 0) {
-        setError(`${result.imported} photo(s) ajoutée(s), ${result.errors.length} erreur(s) rencontrée(s)`)
+        setError(`${result.imported} ${t('ui.photoAdded')}, ${result.errors.length} ${t('ui.errorEncountered')}`)
       }
     } catch (err) {
       console.error('Error rescanning directory:', err)
-      setError('Erreur lors du rescan du répertoire')
+      setError(t('photoManager.rescanError'))
     } finally {
       setScanning(false)
     }
   }
 
   const handleSelectAll = () => {
-    // Construire l'arborescence comme dans PhotoTreeView
+    // Build tree structure like in PhotoTreeView
     const tree = { folders: {}, photos: [] }
 
     filteredPhotos.forEach(photo => {
@@ -236,25 +238,25 @@ export default function PhotoManager() {
       current.photos.push({ ...photo, fileName })
     })
 
-    // Naviguer vers le répertoire actuel
+    // Navigate to current directory
     let currentFolder = tree
     currentPath.forEach(folderName => {
       currentFolder = currentFolder.folders[folderName]
     })
 
-    // Collecter tous les IDs du dossier actuel
+    // Collect all IDs from current folder
     const allFolderIds = Object.entries(currentFolder.folders).map(([_, folder]) => `folder-${folder.fullPath}`)
     const allPhotoIds = currentFolder.photos.map(photo => `photo-${photo.id}`)
     const allIds = [...allFolderIds, ...allPhotoIds]
 
-    // Vérifier si tous sont déjà sélectionnés
+    // Check if all are already selected
     const areAllSelected = allIds.length > 0 && allIds.every(id => selectedItems.includes(id))
 
     if (areAllSelected) {
-      // Déselectionner tout
+      // Deselect all
       setSelectedItems([])
     } else {
-      // Sélectionner tout
+      // Select all
       setSelectedItems(allIds)
     }
   }
@@ -267,7 +269,7 @@ export default function PhotoManager() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Chargement...</div>
+        <div className="text-gray-500">{t('common.loading')}</div>
       </div>
     )
   }
@@ -278,7 +280,7 @@ export default function PhotoManager() {
       <div className="flex gap-4 items-center">
         <input
           type="text"
-          placeholder="Rechercher une photo..."
+          placeholder={t('placeholders.photoSearch')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -291,14 +293,14 @@ export default function PhotoManager() {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          Rafraîchir
+          {t('common.refresh')}
         </button>
         <button
           onClick={handleScanDirectory}
           disabled={scanning}
           className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap disabled:bg-blue-400"
         >
-          {scanning ? 'Ajout en cours...' : '+ Ajouter un dossier'}
+          {scanning ? t('ui.addingInProgress') : '+ ' + t('ui.addFolder')}
         </button>
       </div>
 
@@ -307,19 +309,19 @@ export default function PhotoManager() {
         <div className="flex gap-6 text-sm">
           <div>
             <span className="text-gray-500">Total:</span>
-            <span className="ml-2 font-semibold text-gray-900">{photos.length} photos</span>
+            <span className="ml-2 font-semibold text-gray-900">{photos.length} {t('ui.photosLowercase')}</span>
           </div>
           {selectedItems.length > 0 && (
             <>
               <div>
-                <span className="text-gray-500">Sélectionnés:</span>
-                <span className="ml-2 font-semibold text-blue-600">{selectedItems.length} élément(s)</span>
+                <span className="text-gray-500">{t('ui.selected')}</span>
+                <span className="ml-2 font-semibold text-blue-600">{selectedItems.length} {t('ui.items')}</span>
               </div>
               <button
                 onClick={handleDeleteSelected}
                 className="ml-auto text-red-600 hover:text-red-700 font-medium"
               >
-                Supprimer la sélection
+                {t('ui.deleteSelection')}
               </button>
             </>
           )}
@@ -377,23 +379,23 @@ export default function PhotoManager() {
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={confirmDelete}
-        title="Confirmer la suppression"
-        message={`Voulez-vous vraiment supprimer ${deleteInfo.folders + deleteInfo.photos} élément(s) ?\n\n${deleteInfo.folders} dossier(s)\n${deleteInfo.photos} photo(s)`}
-        confirmText="Supprimer"
-        cancelText="Annuler"
+        title={t('ui.confirmDeletion')}
+        message={`${t('common.confirm')} ${deleteInfo.folders + deleteInfo.photos} ${t('ui.items')} ?\n\n${deleteInfo.folders} ${t('ui.folders')}\n${deleteInfo.photos} ${t('ui.photosLowercase')}`}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
         danger={true}
       >
-        {/* Switch pour suppression physique */}
+        {/* Switch for physical deletion */}
         <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <label htmlFor="delete-physical" className="text-sm font-medium text-gray-900 block">
-                Supprimer les fichiers du système
+                {t('ui.deleteFromSystem')}
               </label>
               <p className="text-xs text-gray-500 mt-1">
                 {deletePhysicalFiles
-                  ? 'Les fichiers seront définitivement supprimés du disque'
-                  : 'Les fichiers resteront sur le disque, seules les références seront supprimées'}
+                  ? t('ui.filesWillBePermanentlyDeleted')
+                  : t('ui.filesWillRemainReferencesRemoved')}
               </p>
             </div>
             <button
@@ -419,10 +421,10 @@ export default function PhotoManager() {
         isOpen={showRefreshModal}
         onClose={() => setShowRefreshModal(false)}
         onConfirm={confirmRefresh}
-        title="Rescanner le répertoire"
-        message={`Voulez-vous rescanner le répertoire actuel pour ajouter les nouvelles photos ?\n\nRépertoire : /${[...commonRoot, ...currentPath].join('/')}`}
-        confirmText="Rescanner"
-        cancelText="Annuler"
+        title={t('ui.rescanDirectory')}
+        message={`${t('ui.rescanDirectoryConfirm')}\n\n${t('ui.directory')} /${[...commonRoot, ...currentPath].join('/')}`}
+        confirmText={t('ui.rescan')}
+        cancelText={t('common.cancel')}
         danger={false}
       />
     </div>

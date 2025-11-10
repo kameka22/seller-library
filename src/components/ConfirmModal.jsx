@@ -1,4 +1,7 @@
-export default function ConfirmModal({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirmer", cancelText = "Annuler", danger = false, children }) {
+import { useLanguage } from '../contexts/LanguageContext'
+
+export default function ConfirmModal({ isOpen, onClose, onConfirm, title, message, confirmText, cancelText, danger = false, children }) {
+  const { t } = useLanguage()
   if (!isOpen) return null
 
   const handleConfirm = () => {
@@ -59,14 +62,14 @@ export default function ConfirmModal({ isOpen, onClose, onConfirm, title, messag
                 : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
             }`}
           >
-            {confirmText}
+            {confirmText || t('common.confirm')}
           </button>
           <button
             type="button"
             onClick={handleCancel}
             className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:w-auto sm:text-sm"
           >
-            {cancelText}
+            {cancelText || t('common.cancel')}
           </button>
         </div>
       </div>

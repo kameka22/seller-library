@@ -1,4 +1,7 @@
+import { useLanguage } from '../contexts/LanguageContext'
+
 export default function PlatformCard({ platform, onClick }) {
+  const { t } = useLanguage()
   const isConfigured = platform.api_key && platform.api_secret
   const hasToken = platform.access_token
 
@@ -14,13 +17,13 @@ export default function PlatformCard({ platform, onClick }) {
         <div className="flex items-center gap-2">
           {platform.environment === 'sandbox' && (
             <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
-              Sandbox
+              {t('ui.sandbox')}
             </span>
           )}
           {isConfigured ? (
-            <div className={`w-3 h-3 rounded-full ${hasToken ? 'bg-green-500' : 'bg-orange-500'}`} title={hasToken ? 'Connecté' : 'Configuré'} />
+            <div className={`w-3 h-3 rounded-full ${hasToken ? 'bg-green-500' : 'bg-orange-500'}`} title={hasToken ? t('ui.connected') : t('platforms.configured')} />
           ) : (
-            <div className="w-3 h-3 rounded-full bg-gray-300" title="Non configuré" />
+            <div className="w-3 h-3 rounded-full bg-gray-300" title={t('ui.notConfigured')} />
           )}
         </div>
       </div>
@@ -35,23 +38,23 @@ export default function PlatformCard({ platform, onClick }) {
         {isConfigured ? (
           <>
             <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-              ✓ API configurée
+              ✓ {t('ui.apiConfigured')}
             </span>
             {hasToken && (
               <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
-                ✓ Authentifié
+                ✓ {t('ui.authenticated')}
               </span>
             )}
           </>
         ) : (
           <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded">
-            Configuration requise
+            {t('ui.configurationRequired')}
           </span>
         )}
       </div>
 
       <div className="mt-3 text-xs text-gray-400">
-        Créé le {new Date(platform.created_at).toLocaleDateString('fr-FR')}
+        {t('ui.createdAt')} {new Date(platform.created_at).toLocaleDateString('fr-FR')}
       </div>
     </div>
   )

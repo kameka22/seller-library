@@ -12,10 +12,10 @@ export default function UpdateModal({ updateInfo, onClose, onCheckUpdate, isChec
       await invoke('download_and_install_update', {
         downloadUrl: updateInfo.download_url,
       })
-      // L'application va se fermer et se relancer automatiquement
+      // Application will close and restart automatically
     } catch (error) {
       console.error('Update failed:', error)
-      alert('La mise à jour a échoué: ' + error)
+      alert(t('ui.updateFailed') + ' ' + error)
       setIsUpdating(false)
     }
   }

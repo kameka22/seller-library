@@ -284,6 +284,12 @@ export default function PhotoManager() {
     setShowMoveModal(true)
   }
 
+  const handleMoveItems = (itemIds) => {
+    if (itemIds.length === 0) return
+    setSelectedItems(itemIds)
+    setShowMoveModal(true)
+  }
+
   const confirmMove = async (destinationPath) => {
     const folders = selectedItems
       .filter(id => id.startsWith('folder-'))
@@ -402,6 +408,7 @@ export default function PhotoManager() {
           onSelectAll={handleSelectAll}
           onEditPhoto={handleEditPhoto}
           onDeleteItems={handleDeleteItems}
+          onMoveItems={handleMoveItems}
         />
       </div>
 

@@ -1,4 +1,4 @@
-use crate::models::{Object, CreateObject, UpdateObject, Photo, Platform, CreatePlatform, UpdatePlatform, ObjectPhoto, ObjectPlatform, Category, CreateCategory, Folder, CreateFolder as CreateFolderModel};
+use crate::models::{Object, CreateObject, UpdateObject, Photo, Platform, CreatePlatform, UpdatePlatform, ObjectPhoto, ObjectPlatform, Category, CreateCategory, Folder};
 use sqlx::SqlitePool;
 use tauri::State;
 use serde::{Deserialize, Serialize};

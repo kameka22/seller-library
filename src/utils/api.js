@@ -116,6 +116,16 @@ export const photosAPI = {
   syncDatabase: async () => {
     return await invoke('sync_database')
   },
+
+  // Obtenir le dossier racine de la collection
+  getRootFolder: async () => {
+    return await invoke('get_root_folder')
+  },
+
+  // Définir le dossier racine de la collection
+  setRootFolder: async (path) => {
+    return await invoke('set_root_folder', { path })
+  },
 }
 
 // ========== PLATFORMS API ==========

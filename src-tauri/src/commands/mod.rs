@@ -1479,3 +1479,30 @@ async fn ensure_folder_in_db(pool: &SqlitePool, folder_path: &str) -> Result<i64
 
     Ok(result.last_insert_rowid())
 }
+
+// ========== SETTINGS COMMANDS ==========
+
+#[tauri::command]
+pub async fn get_root_folder(pool: State<'_, SqlitePool>) -> Result<Option<String>, String> {
+    let result: Option<(String,)> = sqlx::query_as("SELECT value FROM settings WHERE key = 'root_folder'")
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(result.map(|(value,)| value))
+}
+
+#[tauri::command]
+pub async fn set_root_folder(pool: State<'_, SqlitePool>, path: String) -> Result<(), String> {
+    sqlx::query(
+        "INSERT INTO settings (key, value, updated_at) VALUES ('root_folder', ?, CURRENT_TIMESTAMP)
+         ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = CURRENT_TIMESTAMP"
+    )
+    .bind(&path)
+    .bind(&path)
+    .execute(pool.inner())
+    .await
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}

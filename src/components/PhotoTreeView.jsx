@@ -18,9 +18,17 @@ export default function PhotoTreeView({
   onSelectAll,
   onEditPhoto,
   onDeleteItems,
-  onMoveItems
+  onMoveItems,
+  rootFolder = null        // Root folder path to display real name
 }) {
   const { t } = useLanguage()
+
+  // Get root folder name from path
+  const rootFolderName = useMemo(() => {
+    if (!rootFolder) return t('ui.root')
+    const parts = rootFolder.split('/').filter(p => p)
+    return parts[parts.length - 1] || t('ui.root')
+  }, [rootFolder, t])
 
   const { show: showPhotoMenu } = useContextMenu({ id: PHOTO_MENU_ID })
   const { show: showFolderMenu } = useContextMenu({ id: FOLDER_MENU_ID })
@@ -230,8 +238,9 @@ export default function PhotoTreeView({
           <button
             onClick={() => onFolderChange(null)}
             className="text-blue-600 hover:text-blue-700 hover:underline"
+            title={rootFolder || t('ui.root')}
           >
-            {t('ui.root')}
+            {rootFolderName}
           </button>
           {breadcrumb.map((folder, index) => (
             <div key={folder.id} className="flex items-center gap-2">

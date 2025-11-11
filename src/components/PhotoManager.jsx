@@ -24,10 +24,25 @@ export default function PhotoManager() {
   const [deleteInfo, setDeleteInfo] = useState({ folders: 0, photos: 0 })
   const [deletePhysicalFiles, setDeletePhysicalFiles] = useState(true)
   const [currentFolderId, setCurrentFolderId] = useState(null) // null = root
+  const [rootFolder, setRootFolder] = useState(null) // Root folder path
 
   useEffect(() => {
-    loadPhotos()
+    loadInitialData()
   }, [])
+
+  const loadInitialData = async () => {
+    await loadPhotos()
+    await loadRootFolder()
+  }
+
+  const loadRootFolder = async () => {
+    try {
+      const root = await photosAPI.getRootFolder()
+      setRootFolder(root)
+    } catch (err) {
+      console.error('Error loading root folder:', err)
+    }
+  }
 
   const loadPhotos = async () => {
     try {
@@ -50,17 +65,23 @@ export default function PhotoManager() {
     }
   }
 
-  const handleScanDirectory = async () => {
+  const handleSelectRootFolder = async () => {
     try {
       const selected = await open({
         directory: true,
         multiple: false,
-        title: t('photoManager.scanningDirectory')
+        title: t('photoManager.selectRootFolder')
       })
 
       if (selected) {
         setScanning(true)
         setError(null)
+
+        // Save root folder to database
+        await photosAPI.setRootFolder(selected)
+        setRootFolder(selected)
+
+        // Automatically scan the selected folder
         const result = await photosAPI.scanDirectory(selected)
         await loadPhotos()
 
@@ -69,8 +90,8 @@ export default function PhotoManager() {
         }
       }
     } catch (err) {
-      console.error('Error scanning directory:', err)
-      setError(t('photoManager.scanningError'))
+      console.error('Error selecting root folder:', err)
+      setError(t('photoManager.rootFolderError'))
     } finally {
       setScanning(false)
     }
@@ -360,11 +381,14 @@ export default function PhotoManager() {
           {t('ui.syncDatabase')}
         </button>
         <button
-          onClick={handleScanDirectory}
+          onClick={handleSelectRootFolder}
           disabled={scanning}
-          className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap disabled:bg-blue-400"
+          className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap disabled:bg-blue-400 flex items-center gap-2"
         >
-          {scanning ? t('ui.addingInProgress') : '+ ' + t('ui.addFolder')}
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+          </svg>
+          {t('ui.rootFolder')}
         </button>
       </div>
 
@@ -421,6 +445,7 @@ export default function PhotoManager() {
           onEditPhoto={handleEditPhoto}
           onDeleteItems={handleDeleteItems}
           onMoveItems={handleMoveItems}
+          rootFolder={rootFolder}
         />
       </div>
 

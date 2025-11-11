@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext'
+import { settingsAPI } from './utils/api'
 import Sidebar from './components/Sidebar'
 import ObjectList from './components/ObjectList'
 import PhotoManager from './components/PhotoManager'
@@ -23,10 +24,20 @@ function AppContent() {
 
   // Check if welcome modal should be shown
   useEffect(() => {
-    const welcomeCompleted = localStorage.getItem('welcomeCompleted')
-    if (!welcomeCompleted) {
-      setShowWelcome(true)
+    const checkWelcomeStatus = async () => {
+      try {
+        const welcomeCompleted = await settingsAPI.get('welcome_completed')
+        if (!welcomeCompleted) {
+          setShowWelcome(true)
+        }
+      } catch (error) {
+        console.error('Error checking welcome status:', error)
+        // On error, show welcome modal to be safe
+        setShowWelcome(true)
+      }
     }
+
+    checkWelcomeStatus()
   }, [])
 
   const getPageTitle = () => {

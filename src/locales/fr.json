@@ -148,7 +148,8 @@
     "settings": "Paramètres Utilisateur",
     "settingsDescription": "Gérez vos informations personnelles et préférences",
     "personalInfo": "Informations Personnelles",
-    "preferences": "Préférences"
+    "preferences": "Préférences",
+    "rootFolderDescription": "Dossier principal de votre collection de photos"
   },
   "pagination": {
     "itemsPerPage": "Éléments par page",

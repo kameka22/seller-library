@@ -184,7 +184,7 @@ export default function UserSettings() {
                 </button>
               </div>
               <p className="text-sm text-gray-500 mt-1">
-                {t('welcome.rootFolderHint')}
+                {t('user.rootFolderDescription')}
               </p>
             </div>
           </div>

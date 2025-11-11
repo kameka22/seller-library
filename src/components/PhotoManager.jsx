@@ -387,12 +387,12 @@ export default function PhotoManager() {
       // Clear selection
       setSelectedItems([])
 
-      // Show success message with link to object
+      // Reload photos to update associations (this will clear error state)
+      await loadPhotos()
+
+      // Show success message AFTER loading photos (so it doesn't get cleared)
       const message = `${t('objects.createObjectSuccess')} - ${t('objects.viewObject')}: ${createdObject.name}`
       setError(message)
-
-      // Reload photos to update associations
-      await loadPhotos()
     } catch (err) {
       console.error('Error creating object:', err)
       setError(t('errors.creatingObject') + ': ' + (err.message || err))

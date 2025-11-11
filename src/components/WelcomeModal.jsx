@@ -1,34 +1,66 @@
 import { useState } from 'react'
+import { open } from '@tauri-apps/api/dialog'
 import { useLanguage } from '../contexts/LanguageContext'
+import { settingsAPI, photosAPI } from '../utils/api'
 
 export default function WelcomeModal({ onComplete }) {
   const { t, changeLanguage } = useLanguage()
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    language: 'en'
+    language: 'fr',
+    rootFolder: ''
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSelectRootFolder = async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: t('photoManager.selectRootFolder')
+      })
+
+      if (selected) {
+        setFormData(prev => ({ ...prev, rootFolder: selected }))
+      }
+    } catch (err) {
+      console.error('Error selecting root folder:', err)
+    }
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
 
     if (!formData.firstName.trim() || !formData.lastName.trim()) {
       return
     }
 
-    // Save user info to localStorage
-    localStorage.setItem('userInfo', JSON.stringify({
-      firstName: formData.firstName,
-      lastName: formData.lastName
-    }))
+    setIsSubmitting(true)
 
-    // Change language
-    changeLanguage(formData.language)
+    try {
+      // Save all settings to database
+      await settingsAPI.setFirstName(formData.firstName)
+      await settingsAPI.setLastName(formData.lastName)
+      await settingsAPI.setLanguage(formData.language)
 
-    // Mark welcome as completed
-    localStorage.setItem('welcomeCompleted', 'true')
+      // Save root folder if selected (this will trigger folder scanning)
+      if (formData.rootFolder) {
+        await photosAPI.setRootFolder(formData.rootFolder)
+      }
 
-    onComplete()
+      // Mark welcome as completed in database
+      await settingsAPI.set('welcome_completed', 'true')
+
+      // Change language in context
+      changeLanguage(formData.language)
+
+      onComplete()
+    } catch (error) {
+      console.error('Error saving settings:', error)
+      alert(t('photoManager.rootFolderError'))
+      setIsSubmitting(false)
+    }
   }
 
   const handleChange = (field, value) => {
@@ -107,15 +139,42 @@ export default function WelcomeModal({ onComplete }) {
                 required
               />
             </div>
+
+            {/* Root Folder */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t('ui.rootFolder')} ({t('common.optional')})
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={formData.rootFolder}
+                  readOnly
+                  placeholder={t('photoManager.selectRootFolder')}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                />
+                <button
+                  type="button"
+                  onClick={handleSelectRootFolder}
+                  className="px-4 py-2 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  {t('common.browse')}
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                {t('welcome.rootFolderHint')}
+              </p>
+            </div>
           </div>
 
           {/* Footer */}
           <div className="mt-6">
             <button
               type="submit"
-              className="w-full px-4 py-3 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors font-medium"
+              disabled={isSubmitting}
+              className="w-full px-4 py-3 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors font-medium disabled:opacity-50"
             >
-              {t('common.validate')}
+              {isSubmitting ? t('common.loading') : t('common.validate')}
             </button>
           </div>
         </form>

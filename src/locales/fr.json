@@ -12,6 +12,7 @@
     "saved": "Enregistré",
     "delete": "Supprimer",
     "edit": "Modifier",
+    "move": "Déplacer",
     "create": "Créer",
     "add": "Ajouter",
     "refresh": "Actualiser",
@@ -21,7 +22,9 @@
     "no": "Non",
     "loading": "Chargement...",
     "validate": "Valider",
-    "version": "Version"
+    "version": "Version",
+    "optional": "facultatif",
+    "browse": "Parcourir"
   },
   "window": {
     "minimize": "Réduire",
@@ -35,7 +38,8 @@
     "lastName": "Nom",
     "language": "Langue",
     "english": "Anglais",
-    "french": "Français"
+    "french": "Français",
+    "rootFolderHint": "Vous pourrez le définir plus tard dans les Paramètres"
   },
   "sidebar": {
     "objects": "Objets",
@@ -144,7 +148,8 @@
     "settings": "Paramètres Utilisateur",
     "settingsDescription": "Gérez vos informations personnelles et préférences",
     "personalInfo": "Informations Personnelles",
-    "preferences": "Préférences"
+    "preferences": "Préférences",
+    "rootFolderDescription": "Dossier principal de votre collection de photos"
   },
   "pagination": {
     "itemsPerPage": "Éléments par page",
@@ -218,7 +223,10 @@
     "scanningError": "Erreur lors du scan du répertoire",
     "deletingError": "Erreur lors de la suppression",
     "rescanError": "Erreur lors du rescan du répertoire",
-    "cannotDetermineDirectory": "Impossible de déterminer le répertoire à rescanner"
+    "cannotDetermineDirectory": "Impossible de déterminer le répertoire à rescanner",
+    "syncError": "Erreur lors de la synchronisation de la base de données",
+    "selectRootFolder": "Sélectionner le dossier principal de la collection",
+    "rootFolderError": "Erreur lors de la sélection du dossier principal"
   },
   "placeholders": {
     "objectName": "Ex: Montre vintage",
@@ -245,6 +253,7 @@
     "cropArea": "Zone de recadrage",
     "copyCreated": "Une copie sera créée avec le nom",
     "noPhotosInCollection": "Aucune photo dans la collection",
+    "emptyFolder": "Pas de fichier dans ce dossier",
     "scanDirectory": "Scannez un répertoire pour importer des photos",
     "activeToken": "Token d'accès actif",
     "expiresOn": "Expire le",
@@ -341,6 +350,25 @@
     "photosLowercase": "photos",
     "photoImported": "photo(s) importée(s)",
     "errorEncountered": "erreur(s) rencontrée(s)",
-    "photoAdded": "photo(s) ajoutée(s)"
+    "photoAdded": "photo(s) ajoutée(s)",
+    "moveItems": "Déplacer les éléments",
+    "selectDestination": "Sélectionnez le dossier de destination",
+    "currentFolder": "Dossier actuel",
+    "select": "Sélectionner",
+    "noSubfolders": "Aucun sous-dossier",
+    "createNewFolder": "Créer un nouveau dossier",
+    "destination": "Destination",
+    "moveHere": "Déplacer ici",
+    "moveSelection": "Déplacer la sélection",
+    "movingItems": "Déplacement en cours...",
+    "moveSuccess": "Déplacement réussi",
+    "moveError": "Erreur lors du déplacement",
+    "syncDatabase": "Synchroniser",
+    "photosRemoved": "photo(s) supprimée(s)",
+    "photosUpdated": "photo(s) mise(s) à jour",
+    "foldersRemoved": "dossier(s) supprimé(s)",
+    "rootFolder": "Dossier principal",
+    "syncDatabaseDescription": "Synchronisez la base de données avec le système de fichiers pour détecter les nouvelles photos et dossiers, supprimer les éléments effacés et mettre à jour la hiérarchie des dossiers.",
+    "noChanges": "Aucun changement détecté. La base de données est à jour."
   }
 }

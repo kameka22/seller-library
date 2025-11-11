@@ -1,4 +1,4 @@
-use crate::models::{Object, CreateObject, UpdateObject, Photo, Platform, CreatePlatform, UpdatePlatform, ObjectPhoto, ObjectPlatform, Category, CreateCategory};
+use crate::models::{Object, CreateObject, UpdateObject, Photo, Platform, CreatePlatform, UpdatePlatform, ObjectPhoto, ObjectPlatform, Category, CreateCategory, Folder};
 use sqlx::SqlitePool;
 use tauri::State;
 use serde::{Deserialize, Serialize};
@@ -135,7 +135,7 @@ pub async fn scan_photos(
     let mut imported_count = 0;
     let mut errors = vec![];
 
-    scan_directory_recursive(pool.inner(), source_path, &mut imported_count, &mut errors)
+    scan_directory_recursive(pool.inner(), source_path, source_path, &mut imported_count, &mut errors)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -148,6 +148,7 @@ pub async fn scan_photos(
 fn scan_directory_recursive<'a>(
     pool: &'a SqlitePool,
     path: &'a Path,
+    root_path: &'a Path,  // Added root path to limit hierarchy
     count: &'a mut i32,
     errors: &'a mut Vec<String>,
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<()>> + Send + 'a>> {
@@ -158,9 +159,9 @@ fn scan_directory_recursive<'a>(
                 let path = entry.path();
 
                 if path.is_dir() {
-                    scan_directory_recursive(pool, &path, count, errors).await?;
+                    scan_directory_recursive(pool, &path, root_path, count, errors).await?;
                 } else if is_image_file(&path) {
-                    if let Err(e) = import_photo(pool, &path).await {
+                    if let Err(e) = import_photo(pool, &path, root_path).await {
                         errors.push(format!("{}: {}", path.display(), e));
                     } else {
                         *count += 1;
@@ -181,7 +182,7 @@ fn is_image_file(path: &Path) -> bool {
     }
 }
 
-async fn import_photo(pool: &SqlitePool, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+async fn import_photo(pool: &SqlitePool, path: &Path, root_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let file_path = path.to_string_lossy().to_string();
     let file_name = path.file_name()
         .ok_or("Invalid file name")?
@@ -197,9 +198,21 @@ async fn import_photo(pool: &SqlitePool, path: &Path) -> Result<(), Box<dyn std:
         (None, None)
     };
 
+    // Get parent folder path
+    let folder_path = if let Some(parent) = path.parent() {
+        parent.to_string_lossy().to_string()
+    } else {
+        return Err("Could not determine parent folder".into());
+    };
+
+    // Ensure folder exists in database with proper hierarchy limited to root_path
+    let root_path_str = root_path.to_string_lossy().to_string();
+    let folder_id = ensure_folder_in_db(pool, &folder_path, &root_path_str).await
+        .map_err(|e| format!("Failed to ensure folder in DB: {}", e))?;
+
     sqlx::query(
-        "INSERT OR IGNORE INTO photos (file_path, original_path, file_name, file_size, width, height)
-         VALUES (?, ?, ?, ?, ?, ?)"
+        "INSERT OR IGNORE INTO photos (file_path, original_path, file_name, file_size, width, height, folder_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(&file_path)
     .bind(&file_path)
@@ -207,6 +220,7 @@ async fn import_photo(pool: &SqlitePool, path: &Path) -> Result<(), Box<dyn std:
     .bind(file_size)
     .bind(width)
     .bind(height)
+    .bind(folder_id)
     .execute(pool)
     .await?;
 
@@ -305,8 +319,34 @@ pub async fn delete_folder_recursive(
         errors.push(format!("Failed to delete folder: {}", e));
     }
 
+    // Now clean up folders from DB that no longer exist on filesystem
+    // This is the same approach as sync_database
+    let all_folders = sqlx::query_as::<_, Folder>("SELECT * FROM folders WHERE path LIKE ?")
+        .bind(format!("{}%", request.folder_path))
+        .fetch_all(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let mut folders_removed = 0;
+    for folder in all_folders {
+        let folder_fs_path = Path::new(&folder.path);
+
+        // Delete from DB if folder doesn't exist on filesystem
+        if !folder_fs_path.exists() {
+            match sqlx::query("DELETE FROM folders WHERE id = ?")
+                .bind(folder.id)
+                .execute(pool.inner())
+                .await
+            {
+                Ok(_) => folders_removed += 1,
+                Err(e) => errors.push(format!("Failed to delete folder {} from DB: {}", folder.id, e)),
+            }
+        }
+    }
+
     Ok(serde_json::json!({
         "deleted": deleted_count,
+        "folders_removed": folders_removed,
         "errors": errors
     }))
 }
@@ -338,8 +378,30 @@ pub async fn delete_folder_recursive_db_only(
         }
     }
 
+    // Clean up folders from DB - get all matching folders and check if they exist
+    let all_folders = sqlx::query_as::<_, Folder>("SELECT * FROM folders WHERE path LIKE ?")
+        .bind(format!("{}%", request.folder_path))
+        .fetch_all(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let mut folders_removed = 0;
+    for folder in all_folders {
+        // For DB-only deletion, we remove the folder entry regardless of filesystem
+        // since we're intentionally keeping files but removing DB references
+        match sqlx::query("DELETE FROM folders WHERE id = ?")
+            .bind(folder.id)
+            .execute(pool.inner())
+            .await
+        {
+            Ok(_) => folders_removed += 1,
+            Err(e) => errors.push(format!("Failed to delete folder {} from DB: {}", folder.id, e)),
+        }
+    }
+
     Ok(serde_json::json!({
         "deleted": deleted_count,
+        "folders_removed": folders_removed,
         "errors": errors
     }))
 }
@@ -1117,4 +1179,714 @@ pub async fn import_photos(
         imported: imported_count,
         errors,
     })
+}
+
+// ========== MOVE PHOTOS AND FOLDERS COMMAND ==========
+
+#[derive(Deserialize)]
+pub struct MoveItemsRequest {
+    pub photo_ids: Vec<i64>,
+    pub folder_paths: Vec<String>,
+    pub destination_path: String,
+}
+
+#[derive(Serialize)]
+pub struct MoveItemsResult {
+    pub moved: i32,
+    pub errors: Vec<String>,
+}
+
+#[tauri::command]
+pub async fn move_photos_and_folders(
+    pool: State<'_, SqlitePool>,
+    request: MoveItemsRequest,
+) -> Result<MoveItemsResult, String> {
+    let dest_path = Path::new(&request.destination_path);
+
+    if !dest_path.exists() {
+        fs::create_dir_all(dest_path)
+            .map_err(|e| format!("Failed to create destination directory: {}", e))?;
+    }
+
+    let mut moved_count = 0;
+    let mut errors = Vec::new();
+
+    // Move individual photos
+    for photo_id in request.photo_ids {
+        let photo = sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE id = ?")
+            .bind(photo_id)
+            .fetch_optional(pool.inner())
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if let Some(photo) = photo {
+            let source_path = Path::new(&photo.file_path);
+
+            if !source_path.exists() {
+                errors.push(format!("Source file not found: {}", photo.file_path));
+                continue;
+            }
+
+            let file_name = source_path.file_name().unwrap().to_string_lossy().to_string();
+            let mut dest_file = dest_path.join(&file_name);
+
+            // Handle duplicates
+            let mut copy_number = 1;
+            while dest_file.exists() {
+                let stem = source_path.file_stem().ok_or("Invalid file name").map_err(|e| e.to_string())?;
+                let extension = source_path.extension().map(|e| e.to_string_lossy()).unwrap_or_default();
+                let new_name = if extension.is_empty() {
+                    format!("{} ({})", stem.to_string_lossy(), copy_number)
+                } else {
+                    format!("{} ({}).{}", stem.to_string_lossy(), copy_number, extension)
+                };
+                dest_file = dest_path.join(&new_name);
+                copy_number += 1;
+            }
+
+            // Move the file
+            match fs::rename(source_path, &dest_file) {
+                Ok(_) => {
+                    // Update database with new paths and folder_id
+                    let new_file_path = dest_file.to_string_lossy().to_string();
+
+                    // Get the new folder path and ensure it exists in database
+                    let new_folder_path = dest_path.to_string_lossy().to_string();
+
+                    // Get root folder from settings to properly create folder hierarchy
+                    let root_folder: Option<(String,)> = sqlx::query_as("SELECT value FROM settings WHERE key = 'root_folder'")
+                        .fetch_optional(pool.inner())
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                    let root_path = root_folder.map(|(value,)| value).unwrap_or_default();
+
+                    // Ensure destination folder exists in DB and get its ID
+                    match ensure_folder_in_db(pool.inner(), &new_folder_path, &root_path).await {
+                        Ok(new_folder_id) => {
+                            // Update photo with new path and folder_id
+                            match sqlx::query(
+                                "UPDATE photos SET file_path = ?, original_path = ?, folder_id = ? WHERE id = ?"
+                            )
+                            .bind(&new_file_path)
+                            .bind(&new_file_path)
+                            .bind(new_folder_id)
+                            .bind(photo_id)
+                            .execute(pool.inner())
+                            .await {
+                                Ok(_) => moved_count += 1,
+                                Err(e) => errors.push(format!("Failed to update database for photo {}: {}", photo_id, e)),
+                            }
+                        }
+                        Err(e) => errors.push(format!("Failed to ensure destination folder for photo {}: {}", photo_id, e)),
+                    }
+                }
+                Err(e) => errors.push(format!("Failed to move file {}: {}", photo.file_path, e)),
+            }
+        } else {
+            errors.push(format!("Photo {} not found", photo_id));
+        }
+    }
+
+    // Move folders
+    for folder_path in request.folder_paths {
+        let source_folder = Path::new(&folder_path);
+
+        if !source_folder.exists() {
+            errors.push(format!("Source folder not found: {}", folder_path));
+            continue;
+        }
+
+        let folder_name = source_folder.file_name().unwrap().to_string_lossy().to_string();
+        let mut dest_folder = dest_path.join(&folder_name);
+
+        // Handle duplicates
+        let mut copy_number = 1;
+        while dest_folder.exists() {
+            let new_name = format!("{} ({})", folder_name, copy_number);
+            dest_folder = dest_path.join(&new_name);
+            copy_number += 1;
+        }
+
+        // Get all photos in this folder before moving
+        let photos_in_folder = sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE file_path LIKE ?")
+            .bind(format!("{}%", folder_path))
+            .fetch_all(pool.inner())
+            .await
+            .map_err(|e| e.to_string())?;
+
+        // Move the entire folder
+        match fs::rename(source_folder, &dest_folder) {
+            Ok(_) => {
+                let dest_folder_str = dest_folder.to_string_lossy().to_string();
+
+                // Get root folder from settings for folder hierarchy
+                let root_folder: Option<(String,)> = sqlx::query_as("SELECT value FROM settings WHERE key = 'root_folder'")
+                    .fetch_optional(pool.inner())
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                let root_path = root_folder.map(|(value,)| value).unwrap_or_default();
+
+                // Update all photos in this folder with new paths and folder_id
+                for photo in photos_in_folder {
+                    let old_path = photo.file_path.clone();
+                    let new_path = old_path.replace(&folder_path, &dest_folder_str);
+
+                    // Get the new folder path for this photo
+                    let photo_path = Path::new(&new_path);
+                    if let Some(parent) = photo_path.parent() {
+                        let photo_folder_path = parent.to_string_lossy().to_string();
+
+                        // Ensure folder exists and get its ID
+                        match ensure_folder_in_db(pool.inner(), &photo_folder_path, &root_path).await {
+                            Ok(new_folder_id) => {
+                                match sqlx::query(
+                                    "UPDATE photos SET file_path = ?, original_path = ?, folder_id = ? WHERE id = ?"
+                                )
+                                .bind(&new_path)
+                                .bind(&new_path)
+                                .bind(new_folder_id)
+                                .bind(photo.id)
+                                .execute(pool.inner())
+                                .await {
+                                    Ok(_) => moved_count += 1,
+                                    Err(e) => errors.push(format!("Failed to update database for photo in folder: {}", e)),
+                                }
+                            }
+                            Err(e) => errors.push(format!("Failed to ensure folder for photo {}: {}", photo.id, e)),
+                        }
+                    }
+                }
+
+                // Update all folders in the folders table (the moved folder and its subfolders)
+                let folders_to_update = sqlx::query_as::<_, Folder>("SELECT * FROM folders WHERE path LIKE ?")
+                    .bind(format!("{}%", folder_path))
+                    .fetch_all(pool.inner())
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                for folder in folders_to_update {
+                    let new_folder_path = folder.path.replace(&folder_path, &dest_folder_str);
+
+                    match sqlx::query("UPDATE folders SET path = ? WHERE id = ?")
+                        .bind(&new_folder_path)
+                        .bind(folder.id)
+                        .execute(pool.inner())
+                        .await {
+                        Ok(_) => {},
+                        Err(e) => errors.push(format!("Failed to update folder path in DB: {}", e)),
+                    }
+                }
+            }
+            Err(e) => errors.push(format!("Failed to move folder {}: {}", folder_path, e)),
+        }
+    }
+
+    // Rebuild folder hierarchy to ensure correct parent_id values after moving folders
+    // Get root folder from settings
+    let root_folder: Option<(String,)> = sqlx::query_as("SELECT value FROM settings WHERE key = 'root_folder'")
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if let Some((root_path,)) = root_folder {
+        match rebuild_folder_hierarchy(pool.inner(), &root_path).await {
+            Ok(_) => {},
+            Err(e) => errors.push(format!("Failed to rebuild folder hierarchy: {}", e)),
+        }
+    }
+
+    Ok(MoveItemsResult {
+        moved: moved_count,
+        errors,
+    })
+}
+
+// ========== FOLDERS COMMANDS ==========
+
+#[tauri::command]
+pub async fn list_folders(pool: State<'_, SqlitePool>) -> Result<Vec<Folder>, String> {
+    sqlx::query_as::<_, Folder>("SELECT * FROM folders ORDER BY path")
+        .fetch_all(pool.inner())
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[derive(Deserialize)]
+pub struct CreateFolderRequest {
+    pub folder_path: String,
+}
+
+#[tauri::command]
+pub async fn create_folder(
+    pool: State<'_, SqlitePool>,
+    request: CreateFolderRequest,
+) -> Result<Folder, String> {
+    let folder_path = Path::new(&request.folder_path);
+
+    // Create the folder physically on the filesystem
+    fs::create_dir_all(folder_path)
+        .map_err(|e| format!("Failed to create folder: {}", e))?;
+
+    // Extract folder name from path
+    let folder_name = folder_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_string();
+
+    // Determine parent_id by looking up parent folder in DB
+    let parent_id: Option<i64> = if let Some(parent) = folder_path.parent() {
+        let parent_path = parent.to_string_lossy().to_string();
+
+        // Check if parent exists in folders table
+        let parent_folder: Option<(i64,)> = sqlx::query_as(
+            "SELECT id FROM folders WHERE path = ?"
+        )
+        .bind(&parent_path)
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+        parent_folder.map(|(id,)| id)
+    } else {
+        None
+    };
+
+    // Insert into database with correct parent_id
+    let result = sqlx::query(
+        "INSERT INTO folders (path, name, parent_id) VALUES (?, ?, ?)"
+    )
+    .bind(&request.folder_path)
+    .bind(&folder_name)
+    .bind(parent_id)
+    .execute(pool.inner())
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let id = result.last_insert_rowid();
+
+    // Return the created folder
+    sqlx::query_as::<_, Folder>("SELECT * FROM folders WHERE id = ?")
+        .bind(id)
+        .fetch_one(pool.inner())
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn delete_folder_from_db(
+    pool: State<'_, SqlitePool>,
+    folder_id: i64,
+) -> Result<(), String> {
+    sqlx::query("DELETE FROM folders WHERE id = ?")
+        .bind(folder_id)
+        .execute(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+// ========== DATABASE SYNC COMMAND ==========
+
+#[derive(Serialize)]
+pub struct SyncDatabaseResult {
+    pub photos_removed: i32,
+    pub photos_updated: i32,
+    pub folders_cleaned: i32,
+    pub errors: Vec<String>,
+}
+
+#[tauri::command]
+pub async fn sync_database(pool: State<'_, SqlitePool>) -> Result<SyncDatabaseResult, String> {
+    let mut photos_removed = 0;
+    let mut photos_updated = 0;
+    let mut folders_cleaned = 0;
+    let mut errors = Vec::new();
+
+    // Get root folder from settings
+    let root_folder: Option<(String,)> = sqlx::query_as("SELECT value FROM settings WHERE key = 'root_folder'")
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let root_path = root_folder.map(|(value,)| value).unwrap_or_default();
+
+    // Get all photos from database
+    let photos = sqlx::query_as::<_, Photo>("SELECT * FROM photos")
+        .fetch_all(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Check each photo
+    for photo in photos {
+        let photo_path = Path::new(&photo.file_path);
+
+        if !photo_path.exists() {
+            // Photo file doesn't exist, remove from database
+            match sqlx::query("DELETE FROM photos WHERE id = ?")
+                .bind(photo.id)
+                .execute(pool.inner())
+                .await
+            {
+                Ok(_) => photos_removed += 1,
+                Err(e) => errors.push(format!("Failed to remove photo {}: {}", photo.id, e)),
+            }
+        } else {
+            // Photo exists, ensure folder_id is correct
+            if let Some(parent) = photo_path.parent() {
+                let folder_path = parent.to_string_lossy().to_string();
+
+                // Use root_path if available, otherwise use folder_path itself as root
+                let effective_root = if !root_path.is_empty() { &root_path } else { &folder_path };
+                match ensure_folder_in_db(pool.inner(), &folder_path, effective_root).await {
+                    Ok(folder_id) => {
+                        // Update photo's folder_id if different
+                        if photo.folder_id != Some(folder_id) {
+                            match sqlx::query("UPDATE photos SET folder_id = ? WHERE id = ?")
+                                .bind(folder_id)
+                                .bind(photo.id)
+                                .execute(pool.inner())
+                                .await
+                            {
+                                Ok(_) => photos_updated += 1,
+                                Err(e) => errors.push(format!("Failed to update photo {}: {}", photo.id, e)),
+                            }
+                        }
+                    }
+                    Err(e) => errors.push(format!("Failed to ensure folder for photo {}: {}", photo.id, e)),
+                }
+            }
+        }
+    }
+
+    // Scan and create all folders, then rebuild hierarchy based on root_path
+    if !root_path.is_empty() {
+        match scan_and_create_folders(pool.inner(), &root_path).await {
+            Ok(_) => {},
+            Err(e) => errors.push(format!("Failed to scan folders: {}", e)),
+        }
+
+        match rebuild_folder_hierarchy(pool.inner(), &root_path).await {
+            Ok(_) => {},
+            Err(e) => errors.push(format!("Failed to rebuild folder hierarchy: {}", e)),
+        }
+
+        // Scan for new photos in the root folder
+        let root_path_obj = Path::new(&root_path);
+        if root_path_obj.exists() && root_path_obj.is_dir() {
+            let mut imported_count = 0;
+            let mut scan_errors = Vec::new();
+
+            match scan_directory_recursive(pool.inner(), root_path_obj, root_path_obj, &mut imported_count, &mut scan_errors).await {
+                Ok(_) => {
+                    photos_updated += imported_count;
+                    if !scan_errors.is_empty() {
+                        errors.extend(scan_errors);
+                    }
+                },
+                Err(e) => errors.push(format!("Failed to scan for new photos: {}", e)),
+            }
+        }
+    }
+
+    // Clean up empty folders (folders with no photos)
+    let empty_folders = sqlx::query_as::<_, Folder>(
+        "SELECT f.* FROM folders f
+         LEFT JOIN photos p ON p.folder_id = f.id
+         WHERE p.id IS NULL"
+    )
+    .fetch_all(pool.inner())
+    .await
+    .map_err(|e| e.to_string())?;
+
+    for folder in empty_folders {
+        let folder_path = Path::new(&folder.path);
+
+        // Only delete from DB if folder doesn't exist on filesystem
+        if !folder_path.exists() {
+            match sqlx::query("DELETE FROM folders WHERE id = ?")
+                .bind(folder.id)
+                .execute(pool.inner())
+                .await
+            {
+                Ok(_) => folders_cleaned += 1,
+                Err(e) => errors.push(format!("Failed to clean folder {}: {}", folder.id, e)),
+            }
+        }
+    }
+
+    Ok(SyncDatabaseResult {
+        photos_removed,
+        photos_updated,
+        folders_cleaned,
+        errors,
+    })
+}
+
+// Scan all subdirectories of root_path and create them in database
+async fn scan_and_create_folders(pool: &SqlitePool, root_path: &str) -> Result<i32, String> {
+    let root = Path::new(root_path);
+    if !root.exists() || !root.is_dir() {
+        return Err(format!("Root path does not exist or is not a directory: {}", root_path));
+    }
+
+    let mut folders_created = 0;
+
+    // Recursively scan all directories
+    fn scan_dir_recursive<'a>(
+        dir: &'a Path,
+        root_path: &'a str,
+        pool: &'a SqlitePool,
+        count: &'a mut i32,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send + 'a>> {
+        Box::pin(async move {
+            let entries = match std::fs::read_dir(dir) {
+                Ok(entries) => entries,
+                Err(e) => return Err(format!("Failed to read directory {}: {}", dir.display(), e)),
+            };
+
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    let path = entry.path();
+
+                    if path.is_dir() {
+                        let folder_path = path.to_string_lossy().to_string();
+
+                        // Create folder in database
+                        if let Ok(_) = ensure_folder_in_db(pool, &folder_path, root_path).await {
+                            *count += 1;
+                        }
+
+                        // Recursively scan subdirectories
+                        scan_dir_recursive(&path, root_path, pool, count).await?;
+                    }
+                }
+            }
+
+            Ok(())
+        })
+    }
+
+    scan_dir_recursive(root, root_path, pool, &mut folders_created).await?;
+
+    Ok(folders_created)
+}
+
+// Rebuild folder hierarchy based on root_path
+// Sets parent_id correctly for all existing folders
+async fn rebuild_folder_hierarchy(pool: &SqlitePool, root_path: &str) -> Result<(), String> {
+    // Get all folders
+    let folders = sqlx::query_as::<_, Folder>("SELECT * FROM folders")
+        .fetch_all(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // For each folder, determine its correct parent_id
+    for folder in folders {
+        let folder_path = Path::new(&folder.path);
+
+        // Determine correct parent_id
+        let correct_parent_id: Option<i64> = if folder.path == root_path {
+            // This is root, should not exist in DB but if it does, skip it
+            continue;
+        } else if let Some(parent) = folder_path.parent() {
+            let parent_path = parent.to_string_lossy().to_string();
+
+            if parent_path == root_path {
+                // Parent is root, so this is level 1 -> parent_id = NULL
+                None
+            } else {
+                // Parent is below root, find its ID
+                let parent_folder: Option<(i64,)> = sqlx::query_as(
+                    "SELECT id FROM folders WHERE path = ?"
+                )
+                .bind(&parent_path)
+                .fetch_optional(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                parent_folder.map(|(id,)| id)
+            }
+        } else {
+            None
+        };
+
+        // Update parent_id if different
+        if folder.parent_id != correct_parent_id {
+            sqlx::query("UPDATE folders SET parent_id = ? WHERE id = ?")
+                .bind(correct_parent_id)
+                .bind(folder.id)
+                .execute(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+    }
+
+    Ok(())
+}
+
+// Helper function to ensure a folder exists in the database with proper parent_id hierarchy
+// Limited to root_path (doesn't create folders above root_path)
+fn ensure_folder_in_db<'a>(
+    pool: &'a SqlitePool,
+    folder_path: &'a str,
+    root_path: &'a str,
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<i64, String>> + Send + 'a>> {
+    Box::pin(async move {
+        // Check if folder already exists
+        let existing: Option<Folder> = sqlx::query_as::<_, Folder>(
+            "SELECT * FROM folders WHERE path = ?"
+        )
+        .bind(folder_path)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        if let Some(folder) = existing {
+            return Ok(folder.id);
+        }
+
+        // Extract folder name from path
+        let path_obj = Path::new(folder_path);
+        let folder_name = path_obj
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("")
+            .to_string();
+
+        // Insert new folder (only if it exists on filesystem)
+        if !path_obj.exists() {
+            return Err(format!("Folder does not exist: {}", folder_path));
+        }
+
+        // Determine parent_id by recursively ensuring parent folder exists
+        // BUT stop at root_path (folders directly under root_path have parent_id = NULL)
+        let parent_id: Option<i64> = if folder_path == root_path {
+            // This is the root folder itself - should not be created in database
+            return Err(format!("Cannot create root folder in database: {}", folder_path));
+        } else if let Some(parent) = path_obj.parent() {
+            let parent_path = parent.to_string_lossy().to_string();
+
+            // Only create parent if it's not empty, exists on filesystem, and is not above root
+            if !parent_path.is_empty() && parent.exists() {
+                // Check if parent is the root_path
+                if parent_path == root_path {
+                    // Parent is root_path, so this folder is at level 1 and should have parent_id = NULL
+                    None
+                } else {
+                    // Check if parent is below root_path
+                    let parent_path_obj = Path::new(&parent_path);
+                    let root_path_obj = Path::new(root_path);
+
+                    if parent_path_obj.starts_with(root_path_obj) {
+                        // Parent is below root, recursively ensure it exists
+                        match ensure_folder_in_db(pool, &parent_path, root_path).await {
+                            Ok(parent_id) => Some(parent_id),
+                            Err(_) => None, // If parent fails, use NULL (root level)
+                        }
+                    } else {
+                        // Parent is above root, so this folder should be at root level
+                        None
+                    }
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let result = sqlx::query(
+            "INSERT INTO folders (path, name, parent_id) VALUES (?, ?, ?)"
+        )
+        .bind(folder_path)
+        .bind(&folder_name)
+        .bind(parent_id)
+        .execute(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(result.last_insert_rowid())
+    })
+}
+
+// ========== SETTINGS COMMANDS ==========
+
+// Generic get/set for any setting
+#[tauri::command]
+pub async fn get_setting(pool: State<'_, SqlitePool>, key: String) -> Result<Option<String>, String> {
+    let result: Option<(String,)> = sqlx::query_as("SELECT value FROM settings WHERE key = ?")
+        .bind(&key)
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(result.map(|(value,)| value))
+}
+
+#[tauri::command]
+pub async fn set_setting(pool: State<'_, SqlitePool>, key: String, value: String) -> Result<(), String> {
+    sqlx::query(
+        "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+         ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = CURRENT_TIMESTAMP"
+    )
+    .bind(&key)
+    .bind(&value)
+    .bind(&value)
+    .execute(pool.inner())
+    .await
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+// Get all settings as a key-value map
+#[derive(Serialize)]
+pub struct SettingsMap {
+    pub settings: std::collections::HashMap<String, String>,
+}
+
+#[tauri::command]
+pub async fn get_all_settings(pool: State<'_, SqlitePool>) -> Result<SettingsMap, String> {
+    let rows: Vec<(String, String)> = sqlx::query_as("SELECT key, value FROM settings")
+        .fetch_all(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let mut settings = std::collections::HashMap::new();
+    for (key, value) in rows {
+        settings.insert(key, value);
+    }
+
+    Ok(SettingsMap { settings })
+}
+
+// Specialized commands for root_folder
+#[tauri::command]
+pub async fn get_root_folder(pool: State<'_, SqlitePool>) -> Result<Option<String>, String> {
+    get_setting(pool, "root_folder".to_string()).await
+}
+
+#[tauri::command]
+pub async fn set_root_folder(pool: State<'_, SqlitePool>, path: String) -> Result<(), String> {
+    sqlx::query(
+        "INSERT INTO settings (key, value, updated_at) VALUES ('root_folder', ?, CURRENT_TIMESTAMP)
+         ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = CURRENT_TIMESTAMP"
+    )
+    .bind(&path)
+    .bind(&path)
+    .execute(pool.inner())
+    .await
+    .map_err(|e| e.to_string())?;
+
+    // Scan and create all folders in the root path
+    scan_and_create_folders(pool.inner(), &path).await?;
+
+    // Rebuild folder hierarchy to ensure correct parent_id values
+    rebuild_folder_hierarchy(pool.inner(), &path).await?;
+
+    Ok(())
 }

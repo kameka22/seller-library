@@ -81,6 +81,95 @@ export const photosAPI = {
   saveEdited: async (photoId, base64Data, createCopy = false) => {
     return await invoke('save_edited_photo', { photoId, request: { base64_data: base64Data, create_copy: createCopy } })
   },
+
+  // Déplacer des photos et dossiers vers un nouveau répertoire
+  moveItems: async (photoIds, folderPaths, destinationPath) => {
+    return await invoke('move_photos_and_folders', {
+      request: {
+        photo_ids: photoIds,
+        folder_paths: folderPaths,
+        destination_path: destinationPath
+      }
+    })
+  },
+
+  // Créer un nouveau dossier
+  createFolder: async (folderPath) => {
+    return await invoke('create_folder', {
+      request: {
+        folder_path: folderPath
+      }
+    })
+  },
+
+  // Lister tous les dossiers depuis la base de données
+  listFolders: async () => {
+    return await invoke('list_folders')
+  },
+
+  // Supprimer un dossier de la base de données
+  deleteFolderFromDb: async (folderId) => {
+    return await invoke('delete_folder_from_db', { folderId })
+  },
+
+  // Synchroniser la base de données avec le système de fichiers
+  syncDatabase: async () => {
+    return await invoke('sync_database')
+  },
+
+  // Obtenir le dossier racine de la collection
+  getRootFolder: async () => {
+    return await invoke('get_root_folder')
+  },
+
+  // Définir le dossier racine de la collection
+  setRootFolder: async (path) => {
+    return await invoke('set_root_folder', { path })
+  },
+}
+
+// ========== SETTINGS API ==========
+
+export const settingsAPI = {
+  // Obtenir une valeur de paramètre
+  get: async (key) => {
+    return await invoke('get_setting', { key })
+  },
+
+  // Définir une valeur de paramètre
+  set: async (key, value) => {
+    return await invoke('set_setting', { key, value })
+  },
+
+  // Obtenir tous les paramètres
+  getAll: async () => {
+    return await invoke('get_all_settings')
+  },
+
+  // Fonctions pratiques pour les paramètres courants
+  getFirstName: async () => {
+    return await invoke('get_setting', { key: 'first_name' })
+  },
+
+  setFirstName: async (value) => {
+    return await invoke('set_setting', { key: 'first_name', value })
+  },
+
+  getLastName: async () => {
+    return await invoke('get_setting', { key: 'last_name' })
+  },
+
+  setLastName: async (value) => {
+    return await invoke('set_setting', { key: 'last_name', value })
+  },
+
+  getLanguage: async () => {
+    return await invoke('get_setting', { key: 'language' })
+  },
+
+  setLanguage: async (value) => {
+    return await invoke('set_setting', { key: 'language', value })
+  },
 }
 
 // ========== PLATFORMS API ==========

@@ -12,6 +12,7 @@
     "saved": "Saved",
     "delete": "Delete",
     "edit": "Edit",
+    "move": "Move",
     "create": "Create",
     "add": "Add",
     "refresh": "Refresh",
@@ -21,7 +22,9 @@
     "no": "No",
     "loading": "Loading...",
     "validate": "Validate",
-    "version": "Version"
+    "version": "Version",
+    "optional": "optional",
+    "browse": "Browse"
   },
   "window": {
     "minimize": "Minimize",
@@ -35,7 +38,8 @@
     "lastName": "Last Name",
     "language": "Language",
     "english": "English",
-    "french": "French"
+    "french": "French",
+    "rootFolderHint": "You can set this later in Settings"
   },
   "sidebar": {
     "objects": "Objects",
@@ -144,7 +148,8 @@
     "settings": "User Settings",
     "settingsDescription": "Manage your personal information and preferences",
     "personalInfo": "Personal Information",
-    "preferences": "Preferences"
+    "preferences": "Preferences",
+    "rootFolderDescription": "Main folder for your photo collection"
   },
   "pagination": {
     "itemsPerPage": "Items per page",
@@ -218,7 +223,10 @@
     "scanningError": "Error scanning directory",
     "deletingError": "Error deleting items",
     "rescanError": "Error rescanning directory",
-    "cannotDetermineDirectory": "Cannot determine directory to rescan"
+    "cannotDetermineDirectory": "Cannot determine directory to rescan",
+    "syncError": "Error synchronizing database",
+    "selectRootFolder": "Select main collection folder",
+    "rootFolderError": "Error selecting root folder"
   },
   "placeholders": {
     "objectName": "Ex: Vintage watch",
@@ -245,6 +253,7 @@
     "cropArea": "Crop area",
     "copyCreated": "A copy will be created with name",
     "noPhotosInCollection": "No photos in collection",
+    "emptyFolder": "No files in this folder",
     "scanDirectory": "Scan a directory to import photos",
     "activeToken": "Active access token",
     "expiresOn": "Expires on",
@@ -341,6 +350,25 @@
     "photosLowercase": "photos",
     "photoImported": "photo(s) imported",
     "errorEncountered": "error(s) encountered",
-    "photoAdded": "photo(s) added"
+    "photoAdded": "photo(s) added",
+    "moveItems": "Move items",
+    "selectDestination": "Select destination folder",
+    "currentFolder": "Current folder",
+    "select": "Select",
+    "noSubfolders": "No subfolders",
+    "createNewFolder": "Create new folder",
+    "destination": "Destination",
+    "moveHere": "Move here",
+    "moveSelection": "Move selection",
+    "movingItems": "Moving items...",
+    "moveSuccess": "Move successful",
+    "moveError": "Error moving items",
+    "syncDatabase": "Sync",
+    "photosRemoved": "photo(s) removed",
+    "photosUpdated": "photo(s) updated",
+    "foldersRemoved": "folder(s) removed",
+    "rootFolder": "Main Folder",
+    "syncDatabaseDescription": "Synchronize the database with the file system to detect new photos and folders, remove deleted items, and update folder hierarchy.",
+    "noChanges": "No changes detected. Database is up to date."
   }
 }

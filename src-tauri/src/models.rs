@@ -54,6 +54,7 @@ pub struct Photo {
     pub file_size: Option<i64>,
     pub width: Option<i32>,
     pub height: Option<i32>,
+    pub folder_id: Option<i64>,
     pub created_at: String,
 }
 
@@ -112,4 +113,20 @@ pub struct ObjectPlatform {
     pub listed_at: Option<String>,
     pub created_at: String,
     pub updated_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct Folder {
+    pub id: i64,
+    pub path: String,
+    pub name: String,
+    pub parent_id: Option<i64>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateFolder {
+    pub path: String,
+    pub name: String,
+    pub parent_id: Option<i64>,
 }

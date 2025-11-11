@@ -235,7 +235,7 @@ export default function PhotoManager() {
   }
 
   const confirmMove = async (destinationPath) => {
-    const folders = selectedItems
+    const movingFolders = selectedItems
       .filter(id => id.startsWith('folder-'))
       .map(id => id.replace('folder-', '')) // Path is already absolute
 
@@ -247,7 +247,7 @@ export default function PhotoManager() {
       setScanning(true)
       setError(null)
 
-      const result = await photosAPI.moveItems(photoIds, folders, destinationPath)
+      const result = await photosAPI.moveItems(photoIds, movingFolders, destinationPath)
 
       // Close modal first
       setShowMoveModal(false)
@@ -255,8 +255,14 @@ export default function PhotoManager() {
       // Reload photos
       await loadPhotos()
 
-      // Reset to root folder (where user can see the changes)
-      setCurrentFolderId(null)
+      // Navigate to destination folder to show the moved items
+      const destinationFolder = folders.find(f => f.path === destinationPath)
+      if (destinationFolder) {
+        setCurrentFolderId(destinationFolder.id)
+      } else {
+        // Fallback to root if destination folder not found
+        setCurrentFolderId(null)
+      }
 
       // Clear selection
       setSelectedItems([])

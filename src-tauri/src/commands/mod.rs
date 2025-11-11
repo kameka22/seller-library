@@ -1298,10 +1298,12 @@ pub async fn move_photos_and_folders(
         // Move the entire folder
         match fs::rename(source_folder, &dest_folder) {
             Ok(_) => {
+                let dest_folder_str = dest_folder.to_string_lossy().to_string();
+
                 // Update all photos in this folder
                 for photo in photos_in_folder {
                     let old_path = photo.file_path.clone();
-                    let new_path = old_path.replace(&folder_path, &dest_folder.to_string_lossy().to_string());
+                    let new_path = old_path.replace(&folder_path, &dest_folder_str);
 
                     match sqlx::query(
                         "UPDATE photos SET file_path = ?, original_path = ? WHERE id = ?"
@@ -1313,6 +1315,26 @@ pub async fn move_photos_and_folders(
                     .await {
                         Ok(_) => moved_count += 1,
                         Err(e) => errors.push(format!("Failed to update database for photo in folder: {}", e)),
+                    }
+                }
+
+                // Update all folders in the folders table (the moved folder and its subfolders)
+                let folders_to_update = sqlx::query_as::<_, Folder>("SELECT * FROM folders WHERE path LIKE ?")
+                    .bind(format!("{}%", folder_path))
+                    .fetch_all(pool.inner())
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                for folder in folders_to_update {
+                    let new_folder_path = folder.path.replace(&folder_path, &dest_folder_str);
+
+                    match sqlx::query("UPDATE folders SET path = ? WHERE id = ?")
+                        .bind(&new_folder_path)
+                        .bind(folder.id)
+                        .execute(pool.inner())
+                        .await {
+                        Ok(_) => {},
+                        Err(e) => errors.push(format!("Failed to update folder path in DB: {}", e)),
                     }
                 }
             }

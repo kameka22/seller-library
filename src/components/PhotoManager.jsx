@@ -23,48 +23,11 @@ export default function PhotoManager() {
   const [showMoveModal, setShowMoveModal] = useState(false)
   const [deleteInfo, setDeleteInfo] = useState({ folders: 0, photos: 0 })
   const [deletePhysicalFiles, setDeletePhysicalFiles] = useState(true)
-  const [currentPath, setCurrentPath] = useState([])
-  const [commonRoot, setCommonRoot] = useState([])
+  const [currentFolderId, setCurrentFolderId] = useState(null) // null = root
 
   useEffect(() => {
     loadPhotos()
   }, [])
-
-  // Calculate commonRoot from photos
-  useEffect(() => {
-    if (photos.length === 0) {
-      setCommonRoot([])
-      return
-    }
-
-    const paths = photos.map(p => p.original_path.split('/').filter(part => part !== ''))
-
-    if (paths.length === 1) {
-      const pathParts = [...paths[0]]
-      pathParts.pop()
-      setCommonRoot(pathParts)
-      return
-    }
-
-    let commonParts = paths[0]
-    for (let i = 1; i < paths.length; i++) {
-      const currentPathArr = paths[i]
-      const newCommon = []
-
-      for (let j = 0; j < Math.min(commonParts.length, currentPathArr.length - 1); j++) {
-        if (commonParts[j] === currentPathArr[j]) {
-          newCommon.push(commonParts[j])
-        } else {
-          break
-        }
-      }
-
-      commonParts = newCommon
-      if (commonParts.length === 0) break
-    }
-
-    setCommonRoot(commonParts)
-  }, [photos])
 
   const loadPhotos = async () => {
     try {
@@ -234,10 +197,16 @@ export default function PhotoManager() {
   }
 
   const confirmRefresh = async () => {
-    // Build full path of current directory
-    const fullPath = [...commonRoot, ...currentPath].join('/')
+    // Get folder path from current folder
+    let folderPath = ''
+    if (currentFolderId !== null) {
+      const currentFolder = folders.find(f => f.id === currentFolderId)
+      if (currentFolder) {
+        folderPath = currentFolder.path
+      }
+    }
 
-    if (!fullPath) {
+    if (!folderPath) {
       setError(t('photoManager.cannotDetermineDirectory'))
       return
     }
@@ -245,7 +214,7 @@ export default function PhotoManager() {
     try {
       setScanning(true)
       setError(null)
-      const result = await photosAPI.scanDirectory('/' + fullPath)
+      const result = await photosAPI.scanDirectory(folderPath)
       await loadPhotos()
 
       if (result.errors && result.errors.length > 0) {
@@ -260,38 +229,13 @@ export default function PhotoManager() {
   }
 
   const handleSelectAll = () => {
-    // Build tree structure like in PhotoTreeView
-    const tree = { folders: {}, photos: [] }
-
-    filteredPhotos.forEach(photo => {
-      const pathParts = photo.original_path.split('/').filter(part => part !== '')
-      const fileName = pathParts.pop()
-      const relativeParts = pathParts.slice(commonRoot.length)
-
-      let current = tree
-      relativeParts.forEach((part, index) => {
-        if (!current.folders[part]) {
-          current.folders[part] = {
-            folders: {},
-            photos: [],
-            fullPath: [...commonRoot, ...relativeParts.slice(0, index + 1)].join('/')
-          }
-        }
-        current = current.folders[part]
-      })
-
-      current.photos.push({ ...photo, fileName })
-    })
-
-    // Navigate to current directory
-    let currentFolder = tree
-    currentPath.forEach(folderName => {
-      currentFolder = currentFolder.folders[folderName]
-    })
+    // Get folders and photos in current folder
+    const currentFolderChildren = folders.filter(f => f.parent_id === currentFolderId)
+    const currentFolderPhotos = filteredPhotos.filter(p => p.folder_id === currentFolderId)
 
     // Collect all IDs from current folder
-    const allFolderIds = Object.entries(currentFolder.folders).map(([_, folder]) => `folder-${folder.fullPath}`)
-    const allPhotoIds = currentFolder.photos.map(photo => `photo-${photo.id}`)
+    const allFolderIds = currentFolderChildren.map(f => `folder-${f.path}`)
+    const allPhotoIds = currentFolderPhotos.map(p => `photo-${p.id}`)
     const allIds = [...allFolderIds, ...allPhotoIds]
 
     // Check if all are already selected
@@ -471,8 +415,8 @@ export default function PhotoManager() {
           onPhotoClick={setSelectedPhoto}
           selectedItems={selectedItems}
           onToggleSelect={handleToggleSelect}
-          currentPath={currentPath}
-          onPathChange={setCurrentPath}
+          currentFolderId={currentFolderId}
+          onFolderChange={setCurrentFolderId}
           onSelectAll={handleSelectAll}
           onEditPhoto={handleEditPhoto}
           onDeleteItems={handleDeleteItems}
@@ -581,7 +525,7 @@ export default function PhotoManager() {
         onClose={() => setShowRefreshModal(false)}
         onConfirm={confirmRefresh}
         title={t('ui.rescanDirectory')}
-        message={`${t('ui.rescanDirectoryConfirm')}\n\n${t('ui.directory')} /${[...commonRoot, ...currentPath].join('/')}`}
+        message={`${t('ui.rescanDirectoryConfirm')}\n\n${t('ui.directory')} ${currentFolderId !== null ? folders.find(f => f.id === currentFolderId)?.path || '/' : '/'}`}
         confirmText={t('ui.rescan')}
         cancelText={t('common.cancel')}
         danger={false}

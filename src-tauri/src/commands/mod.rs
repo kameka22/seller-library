@@ -1454,74 +1454,80 @@ pub async fn sync_database(pool: State<'_, SqlitePool>) -> Result<SyncDatabaseRe
 
 // Helper function to ensure a folder exists in the database with proper parent_id hierarchy
 // Limited to root_path (doesn't create folders above root_path)
-async fn ensure_folder_in_db(pool: &SqlitePool, folder_path: &str, root_path: &str) -> Result<i64, String> {
-    // Check if folder already exists
-    let existing: Option<Folder> = sqlx::query_as::<_, Folder>(
-        "SELECT * FROM folders WHERE path = ?"
-    )
-    .bind(folder_path)
-    .fetch_optional(pool)
-    .await
-    .map_err(|e| e.to_string())?;
+fn ensure_folder_in_db<'a>(
+    pool: &'a SqlitePool,
+    folder_path: &'a str,
+    root_path: &'a str,
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<i64, String>> + Send + 'a>> {
+    Box::pin(async move {
+        // Check if folder already exists
+        let existing: Option<Folder> = sqlx::query_as::<_, Folder>(
+            "SELECT * FROM folders WHERE path = ?"
+        )
+        .bind(folder_path)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| e.to_string())?;
 
-    if let Some(folder) = existing {
-        return Ok(folder.id);
-    }
+        if let Some(folder) = existing {
+            return Ok(folder.id);
+        }
 
-    // Extract folder name from path
-    let path_obj = Path::new(folder_path);
-    let folder_name = path_obj
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("")
-        .to_string();
+        // Extract folder name from path
+        let path_obj = Path::new(folder_path);
+        let folder_name = path_obj
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("")
+            .to_string();
 
-    // Insert new folder (only if it exists on filesystem)
-    if !path_obj.exists() {
-        return Err(format!("Folder does not exist: {}", folder_path));
-    }
+        // Insert new folder (only if it exists on filesystem)
+        if !path_obj.exists() {
+            return Err(format!("Folder does not exist: {}", folder_path));
+        }
 
-    // Determine parent_id by recursively ensuring parent folder exists
-    // BUT stop at root_path (root_path itself has parent_id = NULL)
-    let parent_id: Option<i64> = if folder_path == root_path {
-        // This is the root folder, it has no parent
-        None
-    } else if let Some(parent) = path_obj.parent() {
-        let parent_path = parent.to_string_lossy().to_string();
+        // Determine parent_id by recursively ensuring parent folder exists
+        // BUT stop at root_path (root_path itself has parent_id = NULL)
+        let parent_id: Option<i64> = if folder_path == root_path {
+            // This is the root folder, it has no parent
+            None
+        } else if let Some(parent) = path_obj.parent() {
+            let parent_path = parent.to_string_lossy().to_string();
 
-        // Only create parent if it's not empty, exists on filesystem, and is not above root
-        if !parent_path.is_empty() && parent.exists() {
-            // Check if parent is at or below root_path
-            let parent_path_obj = Path::new(&parent_path);
-            let root_path_obj = Path::new(root_path);
+            // Only create parent if it's not empty, exists on filesystem, and is not above root
+            if !parent_path.is_empty() && parent.exists() {
+                // Check if parent is at or below root_path
+                let parent_path_obj = Path::new(&parent_path);
+                let root_path_obj = Path::new(root_path);
 
-            if parent_path_obj.starts_with(root_path_obj) || parent_path == root_path {
-                match ensure_folder_in_db(pool, &parent_path, root_path).await {
-                    Ok(parent_id) => Some(parent_id),
-                    Err(_) => None, // If parent fails, use NULL (root level)
+                if parent_path_obj.starts_with(root_path_obj) || parent_path == root_path {
+                    match ensure_folder_in_db(pool, &parent_path, root_path).await {
+                        Ok(parent_id) => Some(parent_id),
+                        Err(_) => None, // If parent fails, use NULL (root level)
+                    }
+                } else {
+                    // Parent is above root, so this folder should be at root level
+                    None
                 }
             } else {
-                // Parent is above root, so this folder should be at root level
                 None
             }
         } else {
             None
-        }
-    } else {
-        None
-    };
+        };
 
-    let result = sqlx::query(
-        "INSERT INTO folders (path, name, parent_id) VALUES (?, ?, ?)"
-    )
-    .bind(folder_path)
-    .bind(&folder_name)
-    .bind(parent_id)
-    .execute(pool)
-    .await
-    .map_err(|e| e.to_string())?;
+        let result = sqlx::query(
+            "INSERT INTO folders (path, name, parent_id) VALUES (?, ?, ?)"
+        )
+        .bind(folder_path)
+        .bind(&folder_name)
+        .bind(parent_id)
+        .execute(pool)
+        .await
+        .map_err(|e| e.to_string())?;
 
-    Ok(result.last_insert_rowid())
+        Ok(result.last_insert_rowid())
+    })
 }
 
 // ========== SETTINGS COMMANDS ==========

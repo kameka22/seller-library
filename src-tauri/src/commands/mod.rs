@@ -1654,9 +1654,11 @@ fn ensure_folder_in_db<'a>(
 
 // ========== SETTINGS COMMANDS ==========
 
+// Generic get/set for any setting
 #[tauri::command]
-pub async fn get_root_folder(pool: State<'_, SqlitePool>) -> Result<Option<String>, String> {
-    let result: Option<(String,)> = sqlx::query_as("SELECT value FROM settings WHERE key = 'root_folder'")
+pub async fn get_setting(pool: State<'_, SqlitePool>, key: String) -> Result<Option<String>, String> {
+    let result: Option<(String,)> = sqlx::query_as("SELECT value FROM settings WHERE key = ?")
+        .bind(&key)
         .fetch_optional(pool.inner())
         .await
         .map_err(|e| e.to_string())?;
@@ -1664,6 +1666,44 @@ pub async fn get_root_folder(pool: State<'_, SqlitePool>) -> Result<Option<Strin
     Ok(result.map(|(value,)| value))
 }
 
+#[tauri::command]
+pub async fn set_setting(pool: State<'_, SqlitePool>, key: String, value: String) -> Result<(), String> {
+    sqlx::query(
+        "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+         ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = CURRENT_TIMESTAMP"
+    )
+    .bind(&key)
+    .bind(&value)
+    .bind(&value)
+    .execute(pool.inner())
+    .await
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+// Get all settings as a key-value map
+#[derive(Serialize)]
+pub struct SettingsMap {
+    pub settings: std::collections::HashMap<String, String>,
+}
+
+#[tauri::command]
+pub async fn get_all_settings(pool: State<'_, SqlitePool>) -> Result<SettingsMap, String> {
+    let rows: Vec<(String, String)> = sqlx::query_as("SELECT key, value FROM settings")
+        .fetch_all(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let mut settings = std::collections::HashMap::new();
+    for (key, value) in rows {
+        settings.insert(key, value);
+    }
+
+    Ok(SettingsMap { settings })
+}
+
+// Specialized command for root_folder (needs to trigger folder scanning)
 #[tauri::command]
 pub async fn set_root_folder(pool: State<'_, SqlitePool>, path: String) -> Result<(), String> {
     sqlx::query(

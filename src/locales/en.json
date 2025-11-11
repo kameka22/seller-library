@@ -22,7 +22,9 @@
     "no": "No",
     "loading": "Loading...",
     "validate": "Validate",
-    "version": "Version"
+    "version": "Version",
+    "optional": "optional",
+    "browse": "Browse"
   },
   "window": {
     "minimize": "Minimize",
@@ -36,7 +38,8 @@
     "lastName": "Last Name",
     "language": "Language",
     "english": "English",
-    "french": "French"
+    "french": "French",
+    "rootFolderHint": "You can set this later in Settings"
   },
   "sidebar": {
     "objects": "Objects",

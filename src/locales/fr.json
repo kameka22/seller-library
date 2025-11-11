@@ -22,7 +22,9 @@
     "no": "Non",
     "loading": "Chargement...",
     "validate": "Valider",
-    "version": "Version"
+    "version": "Version",
+    "optional": "facultatif",
+    "browse": "Parcourir"
   },
   "window": {
     "minimize": "Réduire",
@@ -36,7 +38,8 @@
     "lastName": "Nom",
     "language": "Langue",
     "english": "Anglais",
-    "french": "Français"
+    "french": "Français",
+    "rootFolderHint": "Vous pourrez le définir plus tard dans les Paramètres"
   },
   "sidebar": {
     "objects": "Objets",

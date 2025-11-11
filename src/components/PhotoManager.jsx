@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
 import { photosAPI } from '../utils/api'
-import { open } from '@tauri-apps/api/dialog'
 import PhotoTreeView from './PhotoTreeView'
 import PhotoDetail from './PhotoDetail'
 import ConfirmModal from './ConfirmModal'
@@ -62,38 +61,6 @@ export default function PhotoManager() {
       setError(t('errors.loadingPhotos'))
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleSelectRootFolder = async () => {
-    try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: t('photoManager.selectRootFolder')
-      })
-
-      if (selected) {
-        setScanning(true)
-        setError(null)
-
-        // Save root folder to database
-        await photosAPI.setRootFolder(selected)
-        setRootFolder(selected)
-
-        // Automatically scan the selected folder
-        const result = await photosAPI.scanDirectory(selected)
-        await loadPhotos()
-
-        if (result.errors && result.errors.length > 0) {
-          setError(`${result.imported} ${t('ui.photoImported')}, ${result.errors.length} ${t('ui.errorEncountered')}`)
-        }
-      }
-    } catch (err) {
-      console.error('Error selecting root folder:', err)
-      setError(t('photoManager.rootFolderError'))
-    } finally {
-      setScanning(false)
     }
   }
 
@@ -379,16 +346,6 @@ export default function PhotoManager() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
           {t('ui.syncDatabase')}
-        </button>
-        <button
-          onClick={handleSelectRootFolder}
-          disabled={scanning}
-          className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap disabled:bg-blue-400 flex items-center gap-2"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-          </svg>
-          {t('ui.rootFolder')}
         </button>
       </div>
 

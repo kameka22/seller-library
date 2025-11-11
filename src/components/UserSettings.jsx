@@ -1,27 +1,60 @@
 import { useState, useEffect } from 'react'
+import { open } from '@tauri-apps/api/dialog'
 import { useLanguage } from '../contexts/LanguageContext'
+import { settingsAPI, photosAPI } from '../utils/api'
 
 export default function UserSettings() {
   const { t, language, changeLanguage } = useLanguage()
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    language: language
+    language: language,
+    rootFolder: ''
   })
   const [isSaving, setIsSaving] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
 
   useEffect(() => {
-    // Load user info from localStorage
-    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
-    setFormData({
-      firstName: userInfo.firstName || '',
-      lastName: userInfo.lastName || '',
-      language: language
-    })
+    // Load user info from database
+    const loadSettings = async () => {
+      try {
+        const [firstName, lastName, rootFolder] = await Promise.all([
+          settingsAPI.getFirstName(),
+          settingsAPI.getLastName(),
+          photosAPI.getRootFolder()
+        ])
+
+        setFormData({
+          firstName: firstName || '',
+          lastName: lastName || '',
+          language: language,
+          rootFolder: rootFolder || ''
+        })
+      } catch (error) {
+        console.error('Error loading settings:', error)
+      }
+    }
+
+    loadSettings()
   }, [language])
 
-  const handleSubmit = (e) => {
+  const handleSelectRootFolder = async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: t('photoManager.selectRootFolder')
+      })
+
+      if (selected) {
+        setFormData(prev => ({ ...prev, rootFolder: selected }))
+      }
+    } catch (err) {
+      console.error('Error selecting root folder:', err)
+    }
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
 
     if (!formData.firstName.trim() || !formData.lastName.trim()) {
@@ -30,25 +63,34 @@ export default function UserSettings() {
 
     setIsSaving(true)
 
-    // Save user info to localStorage
-    localStorage.setItem('userInfo', JSON.stringify({
-      firstName: formData.firstName,
-      lastName: formData.lastName
-    }))
+    try {
+      // Save all settings to database
+      await settingsAPI.setFirstName(formData.firstName)
+      await settingsAPI.setLastName(formData.lastName)
+      await settingsAPI.setLanguage(formData.language)
 
-    // Dispatch event to notify other components
-    window.dispatchEvent(new Event('userInfoUpdated'))
+      // Save root folder if changed (this will trigger folder scanning)
+      if (formData.rootFolder) {
+        await photosAPI.setRootFolder(formData.rootFolder)
+      }
 
-    // Change language if different
-    if (formData.language !== language) {
-      changeLanguage(formData.language)
-    }
+      // Dispatch event to notify other components
+      window.dispatchEvent(new Event('userInfoUpdated'))
 
-    setTimeout(() => {
+      // Change language if different
+      if (formData.language !== language) {
+        changeLanguage(formData.language)
+      }
+
+      setTimeout(() => {
+        setIsSaving(false)
+        setShowSuccess(true)
+        setTimeout(() => setShowSuccess(false), 3000)
+      }, 500)
+    } catch (error) {
+      console.error('Error saving settings:', error)
       setIsSaving(false)
-      setShowSuccess(true)
-      setTimeout(() => setShowSuccess(false), 3000)
-    }, 500)
+    }
   }
 
   const handleChange = (field, value) => {
@@ -118,6 +160,32 @@ export default function UserSettings() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
+            </div>
+
+            {/* Root Folder */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t('ui.rootFolder')}
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={formData.rootFolder}
+                  readOnly
+                  placeholder={t('photoManager.selectRootFolder')}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                />
+                <button
+                  type="button"
+                  onClick={handleSelectRootFolder}
+                  className="px-4 py-2 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  {t('common.browse')}
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                {t('welcome.rootFolderHint')}
+              </p>
             </div>
           </div>
 

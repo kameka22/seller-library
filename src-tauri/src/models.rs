@@ -130,3 +130,14 @@ pub struct CreateFolder {
     pub name: String,
     pub parent_id: Option<i64>,
 }
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct TextFile {
+    pub id: i64,
+    pub file_path: String,
+    pub file_name: String,
+    pub folder_id: Option<i64>,
+    pub file_size: Option<i64>,
+    pub created_at: String,
+    pub updated_at: String,
+}

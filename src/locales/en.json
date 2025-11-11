@@ -213,7 +213,9 @@
     "deletingObject": "Error deleting object",
     "updatingObject": "Error updating object",
     "updatingAssociations": "Error updating photo associations",
-    "removingPhoto": "Error removing photo association"
+    "removingPhoto": "Error removing photo association",
+    "loadingFile": "Error loading file",
+    "savingFile": "Error saving file"
   },
   "interface": {
     "expand": "Expand",
@@ -384,6 +386,12 @@
     "foldersRemoved": "folder(s) removed",
     "rootFolder": "Main Folder",
     "syncDatabaseDescription": "Synchronize the database with the file system to detect new photos and folders, remove deleted items, and update folder hierarchy.",
-    "noChanges": "No changes detected. Database is up to date."
+    "noChanges": "No changes detected. Database is up to date.",
+    "textFiles": "Text Files",
+    "editFile": "Edit File",
+    "unsavedChanges": "Unsaved changes",
+    "enterTextContent": "Enter file content...",
+    "lastModified": "Last modified",
+    "saving": "Saving..."
   }
 }

@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
-import { photosAPI } from '../utils/api'
+import { photosAPI, textFilesAPI } from '../utils/api'
 import PhotoTreeView from './PhotoTreeView'
 import PhotoDetail from './PhotoDetail'
+import TextFileEdit from './TextFileEdit'
 import ConfirmModal from './ConfirmModal'
 import MoveToFolderModal from './MoveToFolderModal'
 import { useLanguage } from '../contexts/LanguageContext'
@@ -9,12 +10,14 @@ import { useLanguage } from '../contexts/LanguageContext'
 export default function PhotoManager() {
   const { t } = useLanguage()
   const [photos, setPhotos] = useState([])
+  const [textFiles, setTextFiles] = useState([])
   const [folders, setFolders] = useState([]) // Real-time folder structure from file system
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedPhoto, setSelectedPhoto] = useState(null)
   const [editingPhoto, setEditingPhoto] = useState(null)
-  const [selectedItems, setSelectedItems] = useState([]) // Can be 'photo-{id}' or 'folder-{path}'
+  const [editingTextFile, setEditingTextFile] = useState(null)
+  const [selectedItems, setSelectedItems] = useState([]) // Can be 'photo-{id}', 'folder-{path}', or 'textfile-{id}'
   const [scanning, setScanning] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -47,16 +50,19 @@ export default function PhotoManager() {
     try {
       setLoading(true)
 
-      // Load photos and folders from database
-      const [photosData, foldersData] = await Promise.all([
+      // Load photos, text files, and folders from database
+      const [photosData, textFilesData, foldersData] = await Promise.all([
         photosAPI.list(),
+        textFilesAPI.list(),
         photosAPI.listFolders()
       ])
 
       console.log('[PhotoManager] Loaded folders:', foldersData?.length)
       console.log('[PhotoManager] Folder paths:', foldersData?.map(f => f.path))
+      console.log('[PhotoManager] Loaded text files:', textFilesData?.length)
 
       setPhotos(photosData)
+      setTextFiles(textFilesData)
       setFolders(foldersData || [])
       setError(null)
     } catch (err) {
@@ -80,6 +86,12 @@ export default function PhotoManager() {
       }
       if (result.photos_updated > 0) {
         messages.push(`${result.photos_updated} ${t('ui.photosUpdated')}`)
+      }
+      if (result.text_files_removed > 0) {
+        messages.push(`${result.text_files_removed} text files removed`)
+      }
+      if (result.text_files_updated > 0) {
+        messages.push(`${result.text_files_updated} text files updated`)
       }
       if (result.folders_cleaned > 0) {
         messages.push(`${result.folders_cleaned} ${t('ui.foldersRemoved')}`)
@@ -129,8 +141,9 @@ export default function PhotoManager() {
 
     const folders = selectedItems.filter(id => id.startsWith('folder-'))
     const photoIds = selectedItems.filter(id => id.startsWith('photo-'))
+    const textFileIds = selectedItems.filter(id => id.startsWith('textfile-'))
 
-    setDeleteInfo({ folders: folders.length, photos: photoIds.length })
+    setDeleteInfo({ folders: folders.length, photos: photoIds.length, textFiles: textFileIds.length })
     setShowDeleteModal(true)
   }
 
@@ -139,6 +152,9 @@ export default function PhotoManager() {
     const photoIds = selectedItems
       .filter(id => id.startsWith('photo-'))
       .map(id => parseInt(id.replace('photo-', '')))
+    const textFileIds = selectedItems
+      .filter(id => id.startsWith('textfile-'))
+      .map(id => parseInt(id.replace('textfile-', '')))
 
     try {
       let deletedCount = 0
@@ -175,6 +191,20 @@ export default function PhotoManager() {
         }
       }
 
+      // Delete individual text files
+      for (const textFileId of textFileIds) {
+        try {
+          if (deletePhysicalFiles) {
+            await textFilesAPI.delete(textFileId)
+          } else {
+            await textFilesAPI.deleteDbOnly(textFileId)
+          }
+          deletedCount++
+        } catch (err) {
+          errors.push(`Error text file ${textFileId}: ${err}`)
+        }
+      }
+
       // Close modal first
       setShowDeleteModal(false)
 
@@ -191,15 +221,16 @@ export default function PhotoManager() {
   }
 
   const handleSelectAll = () => {
-    // Get filtered folders and photos in current folder
-    // filteredFolders and filteredPhotos already contain only current folder items matching search
+    // Get filtered folders, photos, and text files in current folder
+    // filteredFolders, filteredPhotos, and filteredTextFiles already contain only current folder items matching search
 
     // Collect all IDs from current folder, excluding level 1 folders (parent_id === null)
     const allFolderIds = filteredFolders
       .filter(f => f.parent_id !== null) // Only level 2+ folders can be selected
       .map(f => `folder-${f.path}`)
     const allPhotoIds = filteredPhotos.map(p => `photo-${p.id}`)
-    const allIds = [...allFolderIds, ...allPhotoIds]
+    const allTextFileIds = filteredTextFiles.map(tf => `textfile-${tf.id}`)
+    const allIds = [...allFolderIds, ...allPhotoIds, ...allTextFileIds]
 
     // Check if all are already selected
     const areAllSelected = allIds.length > 0 && allIds.every(id => selectedItems.includes(id))
@@ -217,13 +248,18 @@ export default function PhotoManager() {
     setEditingPhoto(photo)
   }
 
+  const handleEditTextFile = (textFile) => {
+    setEditingTextFile(textFile)
+  }
+
   const handleDeleteItems = (itemIds) => {
     if (itemIds.length === 0) return
 
     const folders = itemIds.filter(id => id.startsWith('folder-'))
     const photoIds = itemIds.filter(id => id.startsWith('photo-'))
+    const textFileIds = itemIds.filter(id => id.startsWith('textfile-'))
 
-    setDeleteInfo({ folders: folders.length, photos: photoIds.length })
+    setDeleteInfo({ folders: folders.length, photos: photoIds.length, textFiles: textFileIds.length })
     setSelectedItems(itemIds)
     setShowDeleteModal(true)
   }
@@ -239,6 +275,18 @@ export default function PhotoManager() {
     setShowMoveModal(true)
   }
 
+  const handleCopyItems = (itemIds) => {
+    if (itemIds.length === 0) return
+    setSelectedItems(itemIds)
+    setShowCopyModal(true)
+  }
+
+  const handleFolderChange = (folderId) => {
+    // Clear selection when navigating to a different folder
+    setSelectedItems([])
+    setCurrentFolderId(folderId)
+  }
+
   const confirmMove = async (destinationPath) => {
     const movingFolders = selectedItems
       .filter(id => id.startsWith('folder-'))
@@ -248,11 +296,15 @@ export default function PhotoManager() {
       .filter(id => id.startsWith('photo-'))
       .map(id => parseInt(id.replace('photo-', '')))
 
+    const textFileIds = selectedItems
+      .filter(id => id.startsWith('textfile-'))
+      .map(id => parseInt(id.replace('textfile-', '')))
+
     try {
       setScanning(true)
       setError(null)
 
-      const result = await photosAPI.moveItems(photoIds, movingFolders, destinationPath)
+      const result = await photosAPI.moveItems(photoIds, textFileIds, movingFolders, destinationPath)
 
       // Close modal first
       setShowMoveModal(false)
@@ -298,11 +350,15 @@ export default function PhotoManager() {
       .filter(id => id.startsWith('photo-'))
       .map(id => parseInt(id.replace('photo-', '')))
 
+    const textFileIds = selectedItems
+      .filter(id => id.startsWith('textfile-'))
+      .map(id => parseInt(id.replace('textfile-', '')))
+
     try {
       setScanning(true)
       setError(null)
 
-      const result = await photosAPI.copyItems(photoIds, copyingFolders, destinationPath)
+      const result = await photosAPI.copyItems(photoIds, textFileIds, copyingFolders, destinationPath)
 
       // Close modal first
       setShowCopyModal(false)
@@ -346,6 +402,13 @@ export default function PhotoManager() {
   const filteredFolders = currentFolderSubfolders.filter(folder =>
     folder.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (folder.path && folder.path.toLowerCase().includes(searchQuery.toLowerCase()))
+  )
+
+  // Filter text files in current folder by search query
+  const currentFolderTextFiles = textFiles.filter(tf => tf.folder_id === currentFolderId)
+  const filteredTextFiles = currentFolderTextFiles.filter(textFile =>
+    textFile.file_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (textFile.file_path && textFile.file_path.toLowerCase().includes(searchQuery.toLowerCase()))
   )
 
   if (loading) {
@@ -405,7 +468,7 @@ export default function PhotoManager() {
         <div className="flex gap-6 text-sm items-center">
           <div>
             <span className="text-gray-500">Total:</span>
-            <span className="ml-2 font-semibold text-gray-900">{photos.length} {t('ui.photosLowercase')}</span>
+            <span className="ml-2 font-semibold text-gray-900">{photos.length} {t('ui.photosLowercase')}, {textFiles.length} text files</span>
           </div>
           {selectedItems.length > 0 && (
             <div>
@@ -419,11 +482,12 @@ export default function PhotoManager() {
               className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors font-medium"
             >
               {(() => {
-                // filteredFolders and filteredPhotos already contain only current folder items matching search
+                // filteredFolders, filteredPhotos, and filteredTextFiles already contain only current folder items matching search
                 // Exclude level 1 folders (parent_id === null) from selection
                 const allIds = [
                   ...filteredFolders.filter(f => f.parent_id !== null).map(f => `folder-${f.path}`),
-                  ...filteredPhotos.map(p => `photo-${p.id}`)
+                  ...filteredPhotos.map(p => `photo-${p.id}`),
+                  ...filteredTextFiles.map(tf => `textfile-${tf.id}`)
                 ]
                 const areAllSelected = allIds.length > 0 && allIds.every(id => selectedItems.includes(id))
                 return areAllSelected ? t('ui.deselectAll') : t('ui.selectAll')
@@ -444,19 +508,24 @@ export default function PhotoManager() {
       <div className="bg-white rounded-lg shadow p-6">
         <PhotoTreeView
           photos={filteredPhotos}
+          textFiles={filteredTextFiles}
           folders={filteredFolders}
           onPhotoClick={setSelectedPhoto}
+          onTextFileClick={handleEditTextFile}
           selectedItems={selectedItems}
           onToggleSelect={handleToggleSelect}
           currentFolderId={currentFolderId}
-          onFolderChange={setCurrentFolderId}
+          onFolderChange={handleFolderChange}
           onSelectAll={handleSelectAll}
           onEditPhoto={handleEditPhoto}
+          onEditTextFile={handleEditTextFile}
           onDeleteItems={handleDeleteItems}
           onMoveItems={handleMoveItems}
+          onCopyItems={handleCopyItems}
           rootFolder={rootFolder}
           allFolders={folders}
           allPhotos={photos}
+          allTextFiles={textFiles}
         />
       </div>
 
@@ -519,7 +588,7 @@ export default function PhotoManager() {
         onClose={() => setShowDeleteModal(false)}
         onConfirm={confirmDelete}
         title={t('ui.confirmDeletion')}
-        message={`${t('common.confirm')} ${deleteInfo.folders + deleteInfo.photos} ${t('ui.items')} ?\n\n${deleteInfo.folders} ${t('ui.folders')}\n${deleteInfo.photos} ${t('ui.photosLowercase')}`}
+        message={`${t('common.confirm')} ${deleteInfo.folders + deleteInfo.photos + (deleteInfo.textFiles || 0)} ${t('ui.items')} ?\n\n${deleteInfo.folders} ${t('ui.folders')}\n${deleteInfo.photos} ${t('ui.photosLowercase')}\n${deleteInfo.textFiles || 0} text files`}
         confirmText={t('common.delete')}
         cancelText={t('common.cancel')}
         danger={true}
@@ -580,6 +649,18 @@ export default function PhotoManager() {
         title="ui.copyItems"
         buttonText="ui.copyHere"
       />
+
+      {/* Text File Edit Modal */}
+      {editingTextFile && (
+        <TextFileEdit
+          textFile={editingTextFile}
+          onClose={() => setEditingTextFile(null)}
+          onSaved={async () => {
+            await loadPhotos()
+            setEditingTextFile(null)
+          }}
+        />
+      )}
     </div>
   )
 }

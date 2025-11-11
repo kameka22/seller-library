@@ -82,21 +82,23 @@ export const photosAPI = {
     return await invoke('save_edited_photo', { photoId, request: { base64_data: base64Data, create_copy: createCopy } })
   },
 
-  // Déplacer des photos et dossiers vers un nouveau répertoire
-  moveItems: async (photoIds, folderPaths, destinationPath) => {
+  // Déplacer des photos, fichiers texte et dossiers vers un nouveau répertoire
+  moveItems: async (photoIds, textFileIds, folderPaths, destinationPath) => {
     return await invoke('move_photos_and_folders', {
       request: {
         photo_ids: photoIds,
+        text_file_ids: textFileIds,
         folder_paths: folderPaths,
         destination_path: destinationPath
       }
     })
   },
 
-  copyItems: async (photoIds, folderPaths, destinationPath) => {
+  copyItems: async (photoIds, textFileIds, folderPaths, destinationPath) => {
     return await invoke('copy_photos_and_folders', {
       request: {
         photo_ids: photoIds,
+        text_file_ids: textFileIds,
         folder_paths: folderPaths,
         destination_path: destinationPath
       }
@@ -135,6 +137,35 @@ export const photosAPI = {
   // Définir le dossier racine de la collection
   setRootFolder: async (path) => {
     return await invoke('set_root_folder', { path })
+  },
+}
+
+// ========== TEXT FILES API ==========
+
+export const textFilesAPI = {
+  // Lister tous les fichiers texte
+  list: async () => {
+    return await invoke('list_text_files')
+  },
+
+  // Obtenir le contenu d'un fichier texte
+  getContent: async (fileId) => {
+    return await invoke('get_text_file_content', { fileId })
+  },
+
+  // Sauvegarder le contenu d'un fichier texte
+  saveContent: async (fileId, content) => {
+    return await invoke('save_text_file_content', { fileId, content })
+  },
+
+  // Supprimer un fichier texte (fichier + DB)
+  delete: async (fileId) => {
+    return await invoke('delete_text_file', { fileId })
+  },
+
+  // Supprimer un fichier texte (DB uniquement)
+  deleteDbOnly: async (fileId) => {
+    return await invoke('delete_text_file_db_only', { fileId })
   },
 }
 

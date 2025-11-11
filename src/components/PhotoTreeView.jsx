@@ -5,23 +5,29 @@ import { Menu, Item, useContextMenu } from 'react-contexify'
 import 'react-contexify/dist/ReactContexify.css'
 
 const PHOTO_MENU_ID = 'photo-context-menu'
+const TEXT_FILE_MENU_ID = 'text-file-context-menu'
 const FOLDER_MENU_ID = 'folder-context-menu'
 
 export default function PhotoTreeView({
   photos,
+  textFiles = [],          // Filtered text files to display
   folders = [],            // Filtered folders to display
   onPhotoClick,
+  onTextFileClick,
   selectedItems = [],
   onToggleSelect,
   currentFolderId = null,  // Now using folder ID instead of path array
   onFolderChange,          // Changed from onPathChange
   onSelectAll,
   onEditPhoto,
+  onEditTextFile,
   onDeleteItems,
   onMoveItems,
+  onCopyItems,
   rootFolder = null,       // Root folder path to display real name
   allFolders = [],         // All folders for navigation and counts
-  allPhotos = []           // All photos for counting (not filtered)
+  allPhotos = [],          // All photos for counting (not filtered)
+  allTextFiles = []        // All text files for counting (not filtered)
 }) {
   const { t } = useLanguage()
 
@@ -33,6 +39,7 @@ export default function PhotoTreeView({
   }, [rootFolder, t])
 
   const { show: showPhotoMenu } = useContextMenu({ id: PHOTO_MENU_ID })
+  const { show: showTextFileMenu } = useContextMenu({ id: TEXT_FILE_MENU_ID })
   const { show: showFolderMenu } = useContextMenu({ id: FOLDER_MENU_ID })
 
   // Build folder tree structure based on parent_id relationships using allFolders
@@ -93,7 +100,8 @@ export default function PhotoTreeView({
         id: null,
         name: t('ui.root'),
         children: rootFolders,
-        photos: photos.filter(p => p.folder_id === null)
+        photos: photos.filter(p => p.folder_id === null),
+        textFiles: textFiles.filter(f => f.folder_id === null)
       }
     }
 
@@ -103,7 +111,8 @@ export default function PhotoTreeView({
         id: null,
         name: t('ui.root'),
         children: rootFolders,
-        photos: photos.filter(p => p.folder_id === null)
+        photos: photos.filter(p => p.folder_id === null),
+        textFiles: textFiles.filter(f => f.folder_id === null)
       }
     }
 
@@ -117,9 +126,10 @@ export default function PhotoTreeView({
     return {
       ...folder,
       children: filteredChildren,
-      photos: photos.filter(p => p.folder_id === currentFolderId)
+      photos: photos.filter(p => p.folder_id === currentFolderId),
+      textFiles: textFiles.filter(f => f.folder_id === currentFolderId)
     }
-  }, [currentFolderId, folderMap, rootFolders, photos, folders, t])
+  }, [currentFolderId, folderMap, rootFolders, photos, textFiles, folders, t])
 
   // Build breadcrumb trail
   const breadcrumb = useMemo(() => {
@@ -143,7 +153,8 @@ export default function PhotoTreeView({
       .filter(f => f.parent_id !== null)
       .map(f => `folder-${f.path}`)
     const photoIds = currentFolder.photos.map(p => `photo-${p.id}`)
-    const allIds = [...folderIds, ...photoIds]
+    const textFileIds = currentFolder.textFiles.map(f => `textfile-${f.id}`)
+    const allIds = [...folderIds, ...photoIds, ...textFileIds]
 
     return allIds.length > 0 && allIds.every(id => selectedItems.includes(id))
   }
@@ -229,16 +240,66 @@ export default function PhotoTreeView({
     }
   }
 
+  const handlePhotoCopy = ({ props }) => {
+    if (props.photo && onCopyItems) {
+      onCopyItems([`photo-${props.photo.id}`])
+    }
+  }
+
   const handleFolderMove = ({ props }) => {
     if (props.folder && onMoveItems) {
       onMoveItems([`folder-${props.folder.path}`])
     }
   }
 
+  const handleFolderCopy = ({ props }) => {
+    if (props.folder && onCopyItems) {
+      onCopyItems([`folder-${props.folder.path}`])
+    }
+  }
+
+  // Context menu handlers for text files
+  const handleTextFileContextMenu = (event, textFile) => {
+    event.preventDefault()
+    showTextFileMenu({
+      event,
+      props: { textFile }
+    })
+  }
+
+  const handleTextFileEdit = ({ props }) => {
+    if (props.textFile && onEditTextFile) {
+      onEditTextFile(props.textFile)
+    }
+  }
+
+  const handleTextFileDelete = ({ props }) => {
+    if (props.textFile && onDeleteItems) {
+      onDeleteItems([`textfile-${props.textFile.id}`])
+    }
+  }
+
+  const handleTextFileMove = ({ props }) => {
+    if (props.textFile && onMoveItems) {
+      onMoveItems([`textfile-${props.textFile.id}`])
+    }
+  }
+
+  const handleTextFileCopy = ({ props }) => {
+    if (props.textFile && onCopyItems) {
+      onCopyItems([`textfile-${props.textFile.id}`])
+    }
+  }
+
+  const isTextFileSelected = (fileId) => {
+    return selectedItems.includes(`textfile-${fileId}`)
+  }
+
   // Only show "no photos in collection" message when at root and truly empty
-  // Use allFolders and allPhotos to check if collection is really empty, not just current folder
+  // Use allFolders, allPhotos and allTextFiles to check if collection is really empty
   const photosToCheck = allPhotos.length > 0 ? allPhotos : photos
-  const isCollectionEmpty = (allFolders.length > 0 ? allFolders : folders).length === 0 && photosToCheck.length === 0
+  const textFilesToCheck = allTextFiles.length > 0 ? allTextFiles : textFiles
+  const isCollectionEmpty = (allFolders.length > 0 ? allFolders : folders).length === 0 && photosToCheck.length === 0 && textFilesToCheck.length === 0
   const isAtRoot = currentFolderId === null
 
   if (isCollectionEmpty && isAtRoot) {
@@ -341,7 +402,7 @@ export default function PhotoTreeView({
       )}
 
       {/* Empty folder message */}
-      {currentFolder.children.length === 0 && currentFolder.photos.length === 0 && (
+      {currentFolder.children.length === 0 && currentFolder.photos.length === 0 && currentFolder.textFiles.length === 0 && (
         <div className="text-center py-12 text-gray-500">
           <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
@@ -411,6 +472,59 @@ export default function PhotoTreeView({
         </div>
       )}
 
+      {/* Text files list */}
+      {currentFolder.textFiles.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-gray-700 px-2">{t('ui.textFiles')}</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {currentFolder.textFiles.map((textFile) => {
+              const selected = isTextFileSelected(textFile.id)
+
+              return (
+                <div
+                  key={textFile.id}
+                  className={`relative group cursor-pointer rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors border-2 ${
+                    selected ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                  }`}
+                  onContextMenu={(e) => handleTextFileContextMenu(e, textFile)}
+                >
+                  {/* Selection checkbox */}
+                  {onToggleSelect && (
+                    <div className="absolute top-2 left-2 z-10">
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() => onToggleSelect(`textfile-${textFile.id}`)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-5 h-5 rounded cursor-pointer"
+                      />
+                    </div>
+                  )}
+
+                  {/* File icon and name */}
+                  <div
+                    className="p-4 flex flex-col items-center justify-center min-h-[140px]"
+                    onClick={() => onTextFileClick && onTextFileClick(textFile)}
+                  >
+                    <svg className="w-16 h-16 text-blue-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p className="text-sm font-medium text-gray-900 truncate text-center w-full px-2" title={textFile.file_name}>
+                      {textFile.file_name}
+                    </p>
+                    {textFile.file_size && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {(textFile.file_size / 1024).toFixed(1)} KB
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Context Menus */}
       <Menu id={PHOTO_MENU_ID}>
         <Item onClick={handlePhotoEdit}>
@@ -419,6 +533,14 @@ export default function PhotoTreeView({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
             <span>{t('photos.editPhoto')}</span>
+          </div>
+        </Item>
+        <Item onClick={handlePhotoCopy}>
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            <span>{t('common.copy')}</span>
           </div>
         </Item>
         <Item onClick={handlePhotoMove}>
@@ -439,7 +561,50 @@ export default function PhotoTreeView({
         </Item>
       </Menu>
 
+      <Menu id={TEXT_FILE_MENU_ID}>
+        <Item onClick={handleTextFileEdit}>
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            <span>{t('ui.editFile')}</span>
+          </div>
+        </Item>
+        <Item onClick={handleTextFileCopy}>
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            <span>{t('common.copy')}</span>
+          </div>
+        </Item>
+        <Item onClick={handleTextFileMove}>
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+            <span>{t('common.move')}</span>
+          </div>
+        </Item>
+        <Item onClick={handleTextFileDelete}>
+          <div className="flex items-center gap-2 text-red-600">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            <span>{t('common.delete')}</span>
+          </div>
+        </Item>
+      </Menu>
+
       <Menu id={FOLDER_MENU_ID}>
+        <Item onClick={handleFolderCopy}>
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            <span>{t('common.copy')}</span>
+          </div>
+        </Item>
         <Item onClick={handleFolderMove}>
           <div className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

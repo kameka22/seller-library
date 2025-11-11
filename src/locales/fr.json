@@ -213,7 +213,9 @@
     "deletingObject": "Erreur lors de la suppression",
     "updatingObject": "Erreur lors de la mise à jour",
     "updatingAssociations": "Erreur lors de la mise à jour des associations",
-    "removingPhoto": "Erreur lors de la suppression de l'association"
+    "removingPhoto": "Erreur lors de la suppression de l'association",
+    "loadingFile": "Erreur lors du chargement du fichier",
+    "savingFile": "Erreur lors de l'enregistrement du fichier"
   },
   "interface": {
     "expand": "Déplier",
@@ -384,6 +386,12 @@
     "foldersRemoved": "dossier(s) supprimé(s)",
     "rootFolder": "Dossier principal",
     "syncDatabaseDescription": "Synchronisez la base de données avec le système de fichiers pour détecter les nouvelles photos et dossiers, supprimer les éléments effacés et mettre à jour la hiérarchie des dossiers.",
-    "noChanges": "Aucun changement détecté. La base de données est à jour."
+    "noChanges": "Aucun changement détecté. La base de données est à jour.",
+    "textFiles": "Fichiers texte",
+    "editFile": "Éditer le fichier",
+    "unsavedChanges": "Modifications non enregistrées",
+    "enterTextContent": "Saisissez le contenu du fichier...",
+    "lastModified": "Dernière modification",
+    "saving": "Enregistrement..."
   }
 }

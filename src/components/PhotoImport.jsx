@@ -374,87 +374,89 @@ export default function PhotoImport() {
                 {t('ui.destinationFolder')}
               </label>
 
-              {/* Import Folder Option */}
-              <button
-                onClick={() => {
-                  setDestinationOption('import')
-                  setDestinationFolder(importFolder)
-                }}
-                className={`
-                  w-full p-4 rounded-lg border-2 text-left mb-3 transition-all
-                  ${destinationOption === 'import'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300 bg-white'
-                  }
-                `}
-              >
-                <div className="flex items-start gap-3">
-                  <div className={`
-                    w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5
-                    ${destinationOption === 'import' ? 'border-blue-600' : 'border-gray-300'}
-                  `}>
-                    {destinationOption === 'import' && (
-                      <div className="w-3 h-3 rounded-full bg-blue-600"></div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900 mb-1">{t('ui.importFolder')}</div>
-                    <div className="text-sm text-gray-600 mb-2">
-                      {t('ui.importFolderDesc')}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Import Folder Option */}
+                <button
+                  onClick={() => {
+                    setDestinationOption('import')
+                    setDestinationFolder(importFolder)
+                  }}
+                  className={`
+                    p-4 rounded-lg border-2 text-left transition-all
+                    ${destinationOption === 'import'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }
+                  `}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`
+                      w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 flex-shrink-0
+                      ${destinationOption === 'import' ? 'border-blue-600' : 'border-gray-300'}
+                    `}>
+                      {destinationOption === 'import' && (
+                        <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                      )}
                     </div>
-                    {importFolder && (
-                      <div className="text-sm text-gray-500 font-mono bg-white px-3 py-1 rounded border border-gray-200 inline-block">
-                        {importFolder}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 mb-1">{t('ui.importFolder')}</div>
+                      <div className="text-sm text-gray-600 mb-2">
+                        {t('ui.importFolderDesc')}
                       </div>
-                    )}
+                      {importFolder && (
+                        <div className="text-xs text-gray-500 font-mono bg-white px-2 py-1 rounded border border-gray-200 truncate">
+                          {importFolder}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
 
-              {/* Other Folder Option */}
-              <button
-                onClick={() => setDestinationOption('other')}
-                className={`
-                  w-full p-4 rounded-lg border-2 text-left transition-all
-                  ${destinationOption === 'other'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300 bg-white'
-                  }
-                `}
-              >
-                <div className="flex items-start gap-3">
-                  <div className={`
-                    w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5
-                    ${destinationOption === 'other' ? 'border-blue-600' : 'border-gray-300'}
-                  `}>
-                    {destinationOption === 'other' && (
-                      <div className="w-3 h-3 rounded-full bg-blue-600"></div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900 mb-1">{t('ui.otherFolder')}</div>
-                    <div className="text-sm text-gray-600 mb-3">
-                      {t('ui.otherFolderDesc')}
+                {/* Other Folder Option */}
+                <button
+                  onClick={() => setDestinationOption('other')}
+                  className={`
+                    p-4 rounded-lg border-2 text-left transition-all
+                    ${destinationOption === 'other'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }
+                  `}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`
+                      w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 flex-shrink-0
+                      ${destinationOption === 'other' ? 'border-blue-600' : 'border-gray-300'}
+                    `}>
+                      {destinationOption === 'other' && (
+                        <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                      )}
                     </div>
-                    {destinationOption === 'other' && (
-                      <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="text"
-                          readOnly
-                          value={destinationFolder || t('ui.noFolderSelected')}
-                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
-                        />
-                        <button
-                          onClick={handleSelectDestination}
-                          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          {t('ui.browse')}
-                        </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 mb-1">{t('ui.otherFolder')}</div>
+                      <div className="text-sm text-gray-600 mb-3">
+                        {t('ui.otherFolderDesc')}
                       </div>
-                    )}
+                      {destinationOption === 'other' && (
+                        <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="text"
+                            readOnly
+                            value={destinationFolder || t('ui.noFolderSelected')}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 text-sm"
+                          />
+                          <button
+                            onClick={handleSelectDestination}
+                            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                          >
+                            {t('ui.browse')}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
+              </div>
             </div>
 
             {/* Folder Format Options */}
@@ -463,76 +465,78 @@ export default function PhotoImport() {
                 {t('ui.folderNameFormat')}
               </label>
 
-              {/* Automatic Format */}
-              <button
-                onClick={() => setFolderFormatOption('automatic')}
-                className={`
-                  w-full p-4 rounded-lg border-2 text-left mb-3 transition-all
-                  ${folderFormatOption === 'automatic'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300 bg-white'
-                  }
-                `}
-              >
-                <div className="flex items-start gap-3">
-                  <div className={`
-                    w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5
-                    ${folderFormatOption === 'automatic' ? 'border-blue-600' : 'border-gray-300'}
-                  `}>
-                    {folderFormatOption === 'automatic' && (
-                      <div className="w-3 h-3 rounded-full bg-blue-600"></div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900 mb-1">{t('ui.automaticFormat')}</div>
-                    <div className="text-sm text-gray-600">
-                      {t('ui.automaticFormatDesc')}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Automatic Format */}
+                <button
+                  onClick={() => setFolderFormatOption('automatic')}
+                  className={`
+                    p-4 rounded-lg border-2 text-left transition-all
+                    ${folderFormatOption === 'automatic'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }
+                  `}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`
+                      w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 flex-shrink-0
+                      ${folderFormatOption === 'automatic' ? 'border-blue-600' : 'border-gray-300'}
+                    `}>
+                      {folderFormatOption === 'automatic' && (
+                        <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                      )}
                     </div>
-                    <div className="text-sm text-gray-500 mt-2 font-mono bg-white px-3 py-1 rounded border border-gray-200 inline-block">
-                      {getFolderPreview()}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 mb-1">{t('ui.automaticFormat')}</div>
+                      <div className="text-sm text-gray-600 mb-2">
+                        {t('ui.automaticFormatDesc')}
+                      </div>
+                      <div className="text-xs text-gray-500 font-mono bg-white px-2 py-1 rounded border border-gray-200 inline-block">
+                        {getFolderPreview()}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </button>
+                </button>
 
-              {/* Custom Format */}
-              <button
-                onClick={() => setFolderFormatOption('custom')}
-                className={`
-                  w-full p-4 rounded-lg border-2 text-left transition-all
-                  ${folderFormatOption === 'custom'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300 bg-white'
-                  }
-                `}
-              >
-                <div className="flex items-start gap-3">
-                  <div className={`
-                    w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5
-                    ${folderFormatOption === 'custom' ? 'border-blue-600' : 'border-gray-300'}
-                  `}>
-                    {folderFormatOption === 'custom' && (
-                      <div className="w-3 h-3 rounded-full bg-blue-600"></div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900 mb-1">{t('ui.customFormat')}</div>
-                    <div className="text-sm text-gray-600 mb-3">
-                      {t('ui.customFormatDesc')}
+                {/* Custom Format */}
+                <button
+                  onClick={() => setFolderFormatOption('custom')}
+                  className={`
+                    p-4 rounded-lg border-2 text-left transition-all
+                    ${folderFormatOption === 'custom'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }
+                  `}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`
+                      w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 flex-shrink-0
+                      ${folderFormatOption === 'custom' ? 'border-blue-600' : 'border-gray-300'}
+                    `}>
+                      {folderFormatOption === 'custom' && (
+                        <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                      )}
                     </div>
-                    {folderFormatOption === 'custom' && (
-                      <input
-                        type="text"
-                        value={customFolderName}
-                        onChange={(e) => setCustomFolderName(e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                        placeholder={t('ui.customFolderPlaceholder')}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 mb-1">{t('ui.customFormat')}</div>
+                      <div className="text-sm text-gray-600 mb-3">
+                        {t('ui.customFormatDesc')}
+                      </div>
+                      {folderFormatOption === 'custom' && (
+                        <input
+                          type="text"
+                          value={customFolderName}
+                          onChange={(e) => setCustomFolderName(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          placeholder={t('ui.customFolderPlaceholder')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                      )}
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
+              </div>
             </div>
 
             {/* Preview */}

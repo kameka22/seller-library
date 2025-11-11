@@ -1418,6 +1418,14 @@ pub async fn sync_database(pool: State<'_, SqlitePool>) -> Result<SyncDatabaseRe
         }
     }
 
+    // Rebuild folder hierarchy based on root_path
+    if !root_path.is_empty() {
+        match rebuild_folder_hierarchy(pool.inner(), &root_path).await {
+            Ok(_) => {},
+            Err(e) => errors.push(format!("Failed to rebuild folder hierarchy: {}", e)),
+        }
+    }
+
     // Clean up empty folders (folders with no photos)
     let empty_folders = sqlx::query_as::<_, Folder>(
         "SELECT f.* FROM folders f
@@ -1450,6 +1458,59 @@ pub async fn sync_database(pool: State<'_, SqlitePool>) -> Result<SyncDatabaseRe
         folders_cleaned,
         errors,
     })
+}
+
+// Rebuild folder hierarchy based on root_path
+// Sets parent_id correctly for all existing folders
+async fn rebuild_folder_hierarchy(pool: &SqlitePool, root_path: &str) -> Result<(), String> {
+    // Get all folders
+    let folders = sqlx::query_as::<_, Folder>("SELECT * FROM folders")
+        .fetch_all(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // For each folder, determine its correct parent_id
+    for folder in folders {
+        let folder_path = Path::new(&folder.path);
+
+        // Determine correct parent_id
+        let correct_parent_id: Option<i64> = if folder.path == root_path {
+            // This is root, should not exist in DB but if it does, skip it
+            continue;
+        } else if let Some(parent) = folder_path.parent() {
+            let parent_path = parent.to_string_lossy().to_string();
+
+            if parent_path == root_path {
+                // Parent is root, so this is level 1 -> parent_id = NULL
+                None
+            } else {
+                // Parent is below root, find its ID
+                let parent_folder: Option<(i64,)> = sqlx::query_as(
+                    "SELECT id FROM folders WHERE path = ?"
+                )
+                .bind(&parent_path)
+                .fetch_optional(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                parent_folder.map(|(id,)| id)
+            }
+        } else {
+            None
+        };
+
+        // Update parent_id if different
+        if folder.parent_id != correct_parent_id {
+            sqlx::query("UPDATE folders SET parent_id = ? WHERE id = ?")
+                .bind(correct_parent_id)
+                .bind(folder.id)
+                .execute(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+    }
+
+    Ok(())
 }
 
 // Helper function to ensure a folder exists in the database with proper parent_id hierarchy
@@ -1560,6 +1621,9 @@ pub async fn set_root_folder(pool: State<'_, SqlitePool>, path: String) -> Resul
     .execute(pool.inner())
     .await
     .map_err(|e| e.to_string())?;
+
+    // Rebuild folder hierarchy immediately after setting root folder
+    rebuild_folder_hierarchy(pool.inner(), &path).await?;
 
     Ok(())
 }

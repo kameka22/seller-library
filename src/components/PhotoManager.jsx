@@ -245,6 +245,12 @@ export default function PhotoManager() {
     setShowCopyModal(true)
   }
 
+  const handleFolderChange = (folderId) => {
+    // Clear selection when navigating to a different folder
+    setSelectedItems([])
+    setCurrentFolderId(folderId)
+  }
+
   const confirmMove = async (destinationPath) => {
     const movingFolders = selectedItems
       .filter(id => id.startsWith('folder-'))
@@ -455,7 +461,7 @@ export default function PhotoManager() {
           selectedItems={selectedItems}
           onToggleSelect={handleToggleSelect}
           currentFolderId={currentFolderId}
-          onFolderChange={setCurrentFolderId}
+          onFolderChange={handleFolderChange}
           onSelectAll={handleSelectAll}
           onEditPhoto={handleEditPhoto}
           onDeleteItems={handleDeleteItems}

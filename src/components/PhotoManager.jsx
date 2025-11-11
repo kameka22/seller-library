@@ -9,7 +9,7 @@ import MoveToFolderModal from './MoveToFolderModal'
 import CreateObjectModal from './CreateObjectModal'
 import { useLanguage } from '../contexts/LanguageContext'
 
-export default function PhotoManager() {
+export default function PhotoManager({ onNavigateToObject }) {
   const { t } = useLanguage()
   const [photos, setPhotos] = useState([])
   const [textFiles, setTextFiles] = useState([])
@@ -17,6 +17,7 @@ export default function PhotoManager() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [successMessage, setSuccessMessage] = useState(null)
+  const [createdObjectId, setCreatedObjectId] = useState(null)
   const [selectedPhoto, setSelectedPhoto] = useState(null)
   const [editingPhoto, setEditingPhoto] = useState(null)
   const [editingTextFile, setEditingTextFile] = useState(null)
@@ -395,9 +396,9 @@ export default function PhotoManager() {
       // Reload photos to update associations
       await loadPhotos()
 
-      // Show success message AFTER loading photos
-      const message = `${t('objects.createObjectSuccess')} - ${t('objects.viewObject')}: ${createdObject.name}`
-      setSuccessMessage(message)
+      // Show success message AFTER loading photos with object ID for link
+      setCreatedObjectId(createdObject.id)
+      setSuccessMessage(t('objects.createObjectSuccess'))
     } catch (err) {
       console.error('Error creating object:', err)
       setError(t('errors.creatingObject') + ': ' + (err.message || err))
@@ -543,10 +544,30 @@ export default function PhotoManager() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <div className="flex-1">
-              <p className="text-sm text-green-800">{successMessage}</p>
+              <p className="text-sm text-green-800">
+                {successMessage}
+                {createdObjectId && onNavigateToObject && (
+                  <>
+                    {' - '}
+                    <button
+                      onClick={() => {
+                        onNavigateToObject(createdObjectId)
+                        setSuccessMessage(null)
+                        setCreatedObjectId(null)
+                      }}
+                      className="text-green-700 hover:text-green-900 underline font-medium"
+                    >
+                      {t('objects.clickToViewObject')}
+                    </button>
+                  </>
+                )}
+              </p>
             </div>
             <button
-              onClick={() => setSuccessMessage(null)}
+              onClick={() => {
+                setSuccessMessage(null)
+                setCreatedObjectId(null)
+              }}
               className="flex-shrink-0 text-green-400 hover:text-green-600"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

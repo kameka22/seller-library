@@ -65,7 +65,8 @@
     "createObjectFromPhotos": "Créer un objet depuis les photos",
     "selectedContent": "Contenu sélectionné",
     "createObjectSuccess": "Objet créé avec succès !",
-    "viewObject": "Voir l'objet"
+    "viewObject": "Voir l'objet",
+    "clickToViewObject": "Cliquer ici pour voir l'objet"
   },
   "categories": {
     "title": "Catégories",

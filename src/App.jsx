@@ -165,7 +165,10 @@ function AppContent() {
           {activeTab === 'objects-list' && <ObjectList />}
           {activeTab === 'objects-categories' && <Categories />}
           {activeTab === 'photos-import' && <PhotoImport />}
-          {activeTab === 'photos-collection' && <PhotoManager />}
+          {activeTab === 'photos-collection' && <PhotoManager onNavigateToObject={(objectId) => {
+            localStorage.setItem('pendingObjectToView', objectId)
+            setActiveTab('objects-list')
+          }} />}
           {activeTab === 'platforms-list' && <PlatformList />}
           {activeTab === 'platforms-sales' && <Sales />}
           {activeTab === 'user-settings' && <UserSettings />}

@@ -1937,6 +1937,20 @@ pub async fn set_root_folder(pool: State<'_, SqlitePool>, path: String) -> Resul
     .await
     .map_err(|e| e.to_string())?;
 
+    // Create default folders "categories" and "imports" if they don't exist
+    let categories_path = Path::new(&path).join("categories");
+    let imports_path = Path::new(&path).join("imports");
+
+    if !categories_path.exists() {
+        fs::create_dir_all(&categories_path)
+            .map_err(|e| format!("Failed to create 'categories' folder: {}", e))?;
+    }
+
+    if !imports_path.exists() {
+        fs::create_dir_all(&imports_path)
+            .map_err(|e| format!("Failed to create 'imports' folder: {}", e))?;
+    }
+
     // Scan and create all folders in the root path
     scan_and_create_folders(pool.inner(), &path).await?;
 

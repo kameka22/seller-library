@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
-import { photosAPI, textFilesAPI } from '../utils/api'
+import { invoke } from '@tauri-apps/api/tauri'
+import { photosAPI, textFilesAPI, objectsAPI } from '../utils/api'
 import PhotoTreeView from './PhotoTreeView'
 import PhotoDetail from './PhotoDetail'
 import TextFileEdit from './TextFileEdit'
 import ConfirmModal from './ConfirmModal'
 import MoveToFolderModal from './MoveToFolderModal'
+import CreateObjectModal from './CreateObjectModal'
 import { useLanguage } from '../contexts/LanguageContext'
 
 export default function PhotoManager() {
@@ -23,10 +25,12 @@ export default function PhotoManager() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showMoveModal, setShowMoveModal] = useState(false)
   const [showCopyModal, setShowCopyModal] = useState(false)
+  const [showCreateObjectModal, setShowCreateObjectModal] = useState(false)
   const [deleteInfo, setDeleteInfo] = useState({ folders: 0, photos: 0 })
   const [deletePhysicalFiles, setDeletePhysicalFiles] = useState(true)
   const [currentFolderId, setCurrentFolderId] = useState(null) // null = root
   const [rootFolder, setRootFolder] = useState(null) // Root folder path
+  const [categories, setCategories] = useState([])
 
   useEffect(() => {
     loadInitialData()
@@ -35,6 +39,7 @@ export default function PhotoManager() {
   const loadInitialData = async () => {
     await loadPhotos()
     await loadRootFolder()
+    await loadCategories()
   }
 
   const loadRootFolder = async () => {
@@ -43,6 +48,15 @@ export default function PhotoManager() {
       setRootFolder(root)
     } catch (err) {
       console.error('Error loading root folder:', err)
+    }
+  }
+
+  const loadCategories = async () => {
+    try {
+      const data = await invoke('list_categories')
+      setCategories(data)
+    } catch (err) {
+      console.error('Error loading categories:', err)
     }
   }
 
@@ -341,6 +355,52 @@ export default function PhotoManager() {
     setShowCopyModal(true)
   }
 
+  const handleCreateObject = () => {
+    if (selectedItems.length === 0) return
+    setShowCreateObjectModal(true)
+  }
+
+  const confirmCreateObject = async (objectData) => {
+    try {
+      setScanning(true)
+
+      // Create the object
+      const createdObject = await objectsAPI.create(objectData)
+
+      // Get selected photo IDs
+      const photoIds = selectedItems
+        .filter(id => id.startsWith('photo-'))
+        .map(id => parseInt(id.replace('photo-', '')))
+
+      // Associate all selected photos to the object
+      for (const photoId of photoIds) {
+        try {
+          await photosAPI.associateToObject(photoId, createdObject.id)
+        } catch (err) {
+          console.error(`Error associating photo ${photoId}:`, err)
+        }
+      }
+
+      // Close modal
+      setShowCreateObjectModal(false)
+
+      // Clear selection
+      setSelectedItems([])
+
+      // Show success message with link to object
+      const message = `${t('objects.createObjectSuccess')} - ${t('objects.viewObject')}: ${createdObject.name}`
+      setError(message)
+
+      // Reload photos to update associations
+      await loadPhotos()
+    } catch (err) {
+      console.error('Error creating object:', err)
+      setError(t('errors.creatingObject') + ': ' + (err.message || err))
+    } finally {
+      setScanning(false)
+    }
+  }
+
   const confirmCopy = async (destinationPath) => {
     const copyingFolders = selectedItems
       .filter(id => id.startsWith('folder-'))
@@ -411,6 +471,34 @@ export default function PhotoManager() {
     (textFile.file_path && textFile.file_path.toLowerCase().includes(searchQuery.toLowerCase()))
   )
 
+  // Determine if "Create Object" button should be visible
+  // Visible only in subfolders of root category folders
+  const shouldShowCreateObjectButton = useMemo(() => {
+    if (currentFolderId === null) return false // Not at root level
+
+    const currentFolder = folders.find(f => f.id === currentFolderId)
+    if (!currentFolder) return false
+
+    // Check if parent exists and is a root folder (parent_id === null)
+    if (currentFolder.parent_id === null) return false // We are at a root category folder
+
+    const parentFolder = folders.find(f => f.id === currentFolder.parent_id)
+    if (!parentFolder || parentFolder.parent_id !== null) return false // Parent is not a root folder
+
+    // Check if there's at least one photo or text file selected
+    const hasPhotos = selectedItems.some(id => id.startsWith('photo-'))
+    const hasTextFiles = selectedItems.some(id => id.startsWith('textfile-'))
+
+    return hasPhotos || hasTextFiles
+  }, [currentFolderId, folders, selectedItems])
+
+  // Get current folder info for modal
+  const currentFolderInfo = useMemo(() => {
+    if (currentFolderId === null) return null
+    const currentFolder = folders.find(f => f.id === currentFolderId)
+    return currentFolder || null
+  }, [currentFolderId, folders])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -422,7 +510,7 @@ export default function PhotoManager() {
   return (
     <div className="space-y-4">
       {/* Header Actions */}
-      <div className="flex gap-4 items-center">
+      <div className="flex items-center justify-between">
         <input
           type="text"
           placeholder={t('placeholders.photoSearch')}
@@ -431,7 +519,7 @@ export default function PhotoManager() {
           className="w-1/2 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         {selectedItems.length > 0 && (
-          <>
+          <div className="flex gap-2">
             <button
               onClick={handleCopySelected}
               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors whitespace-nowrap flex items-center gap-2"
@@ -459,7 +547,18 @@ export default function PhotoManager() {
               </svg>
               {t('common.delete')}
             </button>
-          </>
+            {shouldShowCreateObjectButton && (
+              <button
+                onClick={() => setShowCreateObjectModal(true)}
+                className="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700 transition-colors whitespace-nowrap flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                {t('objects.createObject')}
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -648,6 +747,27 @@ export default function PhotoManager() {
         rootFolder={rootFolder}
         title="ui.copyItems"
         buttonText="ui.copyHere"
+      />
+
+      {/* Create Object Modal */}
+      <CreateObjectModal
+        isOpen={showCreateObjectModal}
+        onClose={() => setShowCreateObjectModal(false)}
+        onConfirm={confirmCreateObject}
+        selectedPhotos={
+          selectedItems
+            .filter(id => id.startsWith('photo-'))
+            .map(id => photos.find(p => p.id === parseInt(id.replace('photo-', ''))))
+            .filter(Boolean)
+        }
+        selectedTextFiles={
+          selectedItems
+            .filter(id => id.startsWith('textfile-'))
+            .map(id => textFiles.find(tf => tf.id === parseInt(id.replace('textfile-', ''))))
+            .filter(Boolean)
+        }
+        currentFolderName={currentFolderInfo?.name || ''}
+        categories={categories}
       />
 
       {/* Text File Edit Modal */}

@@ -60,7 +60,12 @@
     "objectDetails": "Détails de l'objet",
     "addPhoto": "Ajouter une photo",
     "managePhotos": "Gérer les photos",
-    "associatedPhotos": "Photos associées"
+    "associatedPhotos": "Photos associées",
+    "createObject": "Créer objet",
+    "createObjectFromPhotos": "Créer un objet depuis les photos",
+    "selectedContent": "Contenu sélectionné",
+    "createObjectSuccess": "Objet créé avec succès !",
+    "viewObject": "Voir l'objet"
   },
   "categories": {
     "title": "Catégories",

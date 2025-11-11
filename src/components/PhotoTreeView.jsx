@@ -9,7 +9,7 @@ const FOLDER_MENU_ID = 'folder-context-menu'
 
 export default function PhotoTreeView({
   photos,
-  folders = [],
+  folders = [],            // Filtered folders to display
   onPhotoClick,
   selectedItems = [],
   onToggleSelect,
@@ -19,7 +19,8 @@ export default function PhotoTreeView({
   onEditPhoto,
   onDeleteItems,
   onMoveItems,
-  rootFolder = null        // Root folder path to display real name
+  rootFolder = null,       // Root folder path to display real name
+  allFolders = []          // All folders for navigation and counts
 }) {
   const { t } = useLanguage()
 
@@ -33,10 +34,12 @@ export default function PhotoTreeView({
   const { show: showPhotoMenu } = useContextMenu({ id: PHOTO_MENU_ID })
   const { show: showFolderMenu } = useContextMenu({ id: FOLDER_MENU_ID })
 
-  // Build folder tree structure based on parent_id relationships
+  // Build folder tree structure based on parent_id relationships using allFolders
   const folderMap = useMemo(() => {
     const map = new Map()
-    folders.forEach(folder => {
+    const foldersToUse = allFolders.length > 0 ? allFolders : folders
+
+    foldersToUse.forEach(folder => {
       map.set(folder.id, {
         ...folder,
         children: [],
@@ -45,7 +48,7 @@ export default function PhotoTreeView({
     })
 
     // Build parent-child relationships
-    folders.forEach(folder => {
+    foldersToUse.forEach(folder => {
       if (folder.parent_id !== null && map.has(folder.parent_id)) {
         const parent = map.get(folder.parent_id)
         parent.children.push(folder.id)
@@ -65,16 +68,17 @@ export default function PhotoTreeView({
       return count
     }
 
-    folders.forEach(folder => countPhotos(folder.id))
+    foldersToUse.forEach(folder => countPhotos(folder.id))
 
     return map
-  }, [folders, photos])
+  }, [allFolders, folders, photos])
 
-  // Get root folders (folders with parent_id = null)
+  // Get root folders (folders with parent_id = null) - use filtered folders for display
   const rootFolders = useMemo(() => {
     return folders
       .filter(f => f.parent_id === null)
       .map(f => folderMap.get(f.id))
+      .filter(Boolean)
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [folders, folderMap])
 
@@ -100,12 +104,19 @@ export default function PhotoTreeView({
       }
     }
 
+    // Filter children to show only folders that match the search (are in folders prop)
+    const folderIds = new Set(folders.map(f => f.id))
+    const filteredChildren = folder.children
+      .map(id => folderMap.get(id))
+      .filter(child => child && folderIds.has(child.id))
+      .sort((a, b) => a.name.localeCompare(b.name))
+
     return {
       ...folder,
-      children: folder.children.map(id => folderMap.get(id)).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name)),
+      children: filteredChildren,
       photos: photos.filter(p => p.folder_id === currentFolderId)
     }
-  }, [currentFolderId, folderMap, rootFolders, photos, t])
+  }, [currentFolderId, folderMap, rootFolders, photos, folders, t])
 
   // Build breadcrumb trail
   const breadcrumb = useMemo(() => {

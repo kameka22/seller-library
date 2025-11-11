@@ -190,12 +190,11 @@ export default function PhotoManager() {
   }
 
   const handleSelectAll = () => {
-    // Get folders and photos in current folder
-    const currentFolderChildren = folders.filter(f => f.parent_id === currentFolderId)
-    // filteredPhotos already contains only current folder photos
+    // Get filtered folders and photos in current folder
+    // filteredFolders and filteredPhotos already contain only current folder items matching search
 
     // Collect all IDs from current folder
-    const allFolderIds = currentFolderChildren.map(f => `folder-${f.path}`)
+    const allFolderIds = filteredFolders.map(f => `folder-${f.path}`)
     const allPhotoIds = filteredPhotos.map(p => `photo-${p.id}`)
     const allIds = [...allFolderIds, ...allPhotoIds]
 
@@ -289,6 +288,13 @@ export default function PhotoManager() {
     (photo.original_path && photo.original_path.toLowerCase().includes(searchQuery.toLowerCase()))
   )
 
+  // Filter folders in current level by search query
+  const currentFolderSubfolders = folders.filter(f => f.parent_id === currentFolderId)
+  const filteredFolders = currentFolderSubfolders.filter(folder =>
+    folder.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (folder.path && folder.path.toLowerCase().includes(searchQuery.toLowerCase()))
+  )
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -349,10 +355,9 @@ export default function PhotoManager() {
               className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors font-medium"
             >
               {(() => {
-                const currentFolderChildren = folders.filter(f => f.parent_id === currentFolderId)
-                // filteredPhotos already contains only current folder photos
+                // filteredFolders and filteredPhotos already contain only current folder items matching search
                 const allIds = [
-                  ...currentFolderChildren.map(f => `folder-${f.path}`),
+                  ...filteredFolders.map(f => `folder-${f.path}`),
                   ...filteredPhotos.map(p => `photo-${p.id}`)
                 ]
                 const areAllSelected = allIds.length > 0 && allIds.every(id => selectedItems.includes(id))
@@ -374,7 +379,7 @@ export default function PhotoManager() {
       <div className="bg-white rounded-lg shadow p-6">
         <PhotoTreeView
           photos={filteredPhotos}
-          folders={folders}
+          folders={filteredFolders}
           onPhotoClick={setSelectedPhoto}
           selectedItems={selectedItems}
           onToggleSelect={handleToggleSelect}
@@ -385,6 +390,7 @@ export default function PhotoManager() {
           onDeleteItems={handleDeleteItems}
           onMoveItems={handleMoveItems}
           rootFolder={rootFolder}
+          allFolders={folders}
         />
       </div>
 

@@ -93,6 +93,16 @@ export const photosAPI = {
     })
   },
 
+  copyItems: async (photoIds, folderPaths, destinationPath) => {
+    return await invoke('copy_photos_and_folders', {
+      request: {
+        photo_ids: photoIds,
+        folder_paths: folderPaths,
+        destination_path: destinationPath
+      }
+    })
+  },
+
   // Créer un nouveau dossier
   createFolder: async (folderPath) => {
     return await invoke('create_folder', {

@@ -9,7 +9,7 @@ const FOLDER_MENU_ID = 'folder-context-menu'
 
 export default function PhotoTreeView({
   photos,
-  folders = [],
+  folders = [],            // Filtered folders to display
   onPhotoClick,
   selectedItems = [],
   onToggleSelect,
@@ -19,7 +19,9 @@ export default function PhotoTreeView({
   onEditPhoto,
   onDeleteItems,
   onMoveItems,
-  rootFolder = null        // Root folder path to display real name
+  rootFolder = null,       // Root folder path to display real name
+  allFolders = [],         // All folders for navigation and counts
+  allPhotos = []           // All photos for counting (not filtered)
 }) {
   const { t } = useLanguage()
 
@@ -33,10 +35,12 @@ export default function PhotoTreeView({
   const { show: showPhotoMenu } = useContextMenu({ id: PHOTO_MENU_ID })
   const { show: showFolderMenu } = useContextMenu({ id: FOLDER_MENU_ID })
 
-  // Build folder tree structure based on parent_id relationships
+  // Build folder tree structure based on parent_id relationships using allFolders
   const folderMap = useMemo(() => {
     const map = new Map()
-    folders.forEach(folder => {
+    const foldersToUse = allFolders.length > 0 ? allFolders : folders
+
+    foldersToUse.forEach(folder => {
       map.set(folder.id, {
         ...folder,
         children: [],
@@ -45,7 +49,7 @@ export default function PhotoTreeView({
     })
 
     // Build parent-child relationships
-    folders.forEach(folder => {
+    foldersToUse.forEach(folder => {
       if (folder.parent_id !== null && map.has(folder.parent_id)) {
         const parent = map.get(folder.parent_id)
         parent.children.push(folder.id)
@@ -53,11 +57,13 @@ export default function PhotoTreeView({
     })
 
     // Count photos in each folder (including subfolders)
+    // Use allPhotos for accurate counts, not filtered photos
+    const photosToCount = allPhotos.length > 0 ? allPhotos : photos
     const countPhotos = (folderId) => {
       const folder = map.get(folderId)
       if (!folder) return 0
 
-      let count = photos.filter(p => p.folder_id === folderId).length
+      let count = photosToCount.filter(p => p.folder_id === folderId).length
       folder.children.forEach(childId => {
         count += countPhotos(childId)
       })
@@ -65,16 +71,17 @@ export default function PhotoTreeView({
       return count
     }
 
-    folders.forEach(folder => countPhotos(folder.id))
+    foldersToUse.forEach(folder => countPhotos(folder.id))
 
     return map
-  }, [folders, photos])
+  }, [allFolders, folders, photos, allPhotos])
 
-  // Get root folders (folders with parent_id = null)
+  // Get root folders (folders with parent_id = null) - use filtered folders for display
   const rootFolders = useMemo(() => {
     return folders
       .filter(f => f.parent_id === null)
       .map(f => folderMap.get(f.id))
+      .filter(Boolean)
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [folders, folderMap])
 
@@ -100,12 +107,19 @@ export default function PhotoTreeView({
       }
     }
 
+    // Filter children to show only folders that match the search (are in folders prop)
+    const folderIds = new Set(folders.map(f => f.id))
+    const filteredChildren = folder.children
+      .map(id => folderMap.get(id))
+      .filter(child => child && folderIds.has(child.id))
+      .sort((a, b) => a.name.localeCompare(b.name))
+
     return {
       ...folder,
-      children: folder.children.map(id => folderMap.get(id)).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name)),
+      children: filteredChildren,
       photos: photos.filter(p => p.folder_id === currentFolderId)
     }
-  }, [currentFolderId, folderMap, rootFolders, photos, t])
+  }, [currentFolderId, folderMap, rootFolders, photos, folders, t])
 
   // Build breadcrumb trail
   const breadcrumb = useMemo(() => {
@@ -124,7 +138,10 @@ export default function PhotoTreeView({
 
   // Check if all elements in current folder are selected
   const areAllSelected = () => {
-    const folderIds = currentFolder.children.map(f => `folder-${f.path}`)
+    // Exclude level 1 folders (parent_id === null) from selection
+    const folderIds = currentFolder.children
+      .filter(f => f.parent_id !== null)
+      .map(f => `folder-${f.path}`)
     const photoIds = currentFolder.photos.map(p => `photo-${p.id}`)
     const allIds = [...folderIds, ...photoIds]
 
@@ -218,7 +235,13 @@ export default function PhotoTreeView({
     }
   }
 
-  if (photos.length === 0 && folders.length === 0) {
+  // Only show "no photos in collection" message when at root and truly empty
+  // Use allFolders and allPhotos to check if collection is really empty, not just current folder
+  const photosToCheck = allPhotos.length > 0 ? allPhotos : photos
+  const isCollectionEmpty = (allFolders.length > 0 ? allFolders : folders).length === 0 && photosToCheck.length === 0
+  const isAtRoot = currentFolderId === null
+
+  if (isCollectionEmpty && isAtRoot) {
     return (
       <div className="text-center py-12 text-gray-500">
         <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -265,6 +288,8 @@ export default function PhotoTreeView({
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {currentFolder.children.map((folder) => {
               const selected = isFolderSelected(folder)
+              // Level 1 folders (parent_id === null) cannot be selected or have context menu
+              const isLevel1 = folder.parent_id === null
 
               return (
                 <div
@@ -272,18 +297,24 @@ export default function PhotoTreeView({
                   className={`relative group bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors border-2 ${
                     selected ? 'border-blue-500 bg-blue-50' : 'border-transparent'
                   }`}
-                  onContextMenu={(e) => handleFolderContextMenu(e, folder)}
+                  onContextMenu={(e) => {
+                    if (!isLevel1) {
+                      handleFolderContextMenu(e, folder)
+                    }
+                  }}
                 >
-                  {/* Selection checkbox */}
-                  <div className="absolute top-2 left-2 z-10">
-                    <input
-                      type="checkbox"
-                      checked={selected}
-                      onChange={() => handleFolderSelect(folder)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-5 h-5 rounded cursor-pointer"
-                    />
-                  </div>
+                  {/* Selection checkbox - only for level 2+ folders */}
+                  {!isLevel1 && (
+                    <div className="absolute top-2 left-2 z-10">
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() => handleFolderSelect(folder)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-5 h-5 rounded cursor-pointer"
+                      />
+                    </div>
+                  )}
 
                   {/* Folder icon and name */}
                   <div

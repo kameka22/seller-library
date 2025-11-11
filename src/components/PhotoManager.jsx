@@ -19,6 +19,7 @@ export default function PhotoManager() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showMoveModal, setShowMoveModal] = useState(false)
+  const [showCopyModal, setShowCopyModal] = useState(false)
   const [deleteInfo, setDeleteInfo] = useState({ folders: 0, photos: 0 })
   const [deletePhysicalFiles, setDeletePhysicalFiles] = useState(true)
   const [currentFolderId, setCurrentFolderId] = useState(null) // null = root
@@ -190,13 +191,14 @@ export default function PhotoManager() {
   }
 
   const handleSelectAll = () => {
-    // Get folders and photos in current folder
-    const currentFolderChildren = folders.filter(f => f.parent_id === currentFolderId)
-    const currentFolderPhotos = filteredPhotos.filter(p => p.folder_id === currentFolderId)
+    // Get filtered folders and photos in current folder
+    // filteredFolders and filteredPhotos already contain only current folder items matching search
 
-    // Collect all IDs from current folder
-    const allFolderIds = currentFolderChildren.map(f => `folder-${f.path}`)
-    const allPhotoIds = currentFolderPhotos.map(p => `photo-${p.id}`)
+    // Collect all IDs from current folder, excluding level 1 folders (parent_id === null)
+    const allFolderIds = filteredFolders
+      .filter(f => f.parent_id !== null) // Only level 2+ folders can be selected
+      .map(f => `folder-${f.path}`)
+    const allPhotoIds = filteredPhotos.map(p => `photo-${p.id}`)
     const allIds = [...allFolderIds, ...allPhotoIds]
 
     // Check if all are already selected
@@ -282,9 +284,68 @@ export default function PhotoManager() {
     }
   }
 
-  const filteredPhotos = photos.filter(photo =>
+  const handleCopySelected = () => {
+    if (selectedItems.length === 0) return
+    setShowCopyModal(true)
+  }
+
+  const confirmCopy = async (destinationPath) => {
+    const copyingFolders = selectedItems
+      .filter(id => id.startsWith('folder-'))
+      .map(id => id.replace('folder-', '')) // Path is already absolute
+
+    const photoIds = selectedItems
+      .filter(id => id.startsWith('photo-'))
+      .map(id => parseInt(id.replace('photo-', '')))
+
+    try {
+      setScanning(true)
+      setError(null)
+
+      const result = await photosAPI.copyItems(photoIds, copyingFolders, destinationPath)
+
+      // Close modal first
+      setShowCopyModal(false)
+
+      // Reload photos
+      await loadPhotos()
+
+      // Navigate to destination folder to show the copied items
+      const destinationFolder = folders.find(f => f.path === destinationPath)
+      if (destinationFolder) {
+        setCurrentFolderId(destinationFolder.id)
+      } else {
+        // Fallback to root if destination folder not found
+        setCurrentFolderId(null)
+      }
+
+      // Clear selection
+      setSelectedItems([])
+
+      // Show success message if there were errors
+      if (result.errors && result.errors.length > 0) {
+        setError(`${t('ui.copySuccess')} - ${result.copied} ${t('ui.items')}. ${result.errors.length} ${t('ui.errorEncountered')}`)
+      }
+    } catch (err) {
+      console.error('Error copying items:', err)
+      setError(t('ui.copyError') + ': ' + (err.message || err))
+    } finally {
+      setScanning(false)
+    }
+  }
+
+  // First filter by current folder (visual level), then apply search query
+  const currentFolderPhotos = photos.filter(p => p.folder_id === currentFolderId)
+  const filteredPhotos = currentFolderPhotos.filter(photo =>
     photo.file_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (photo.original_path && photo.original_path.toLowerCase().includes(searchQuery.toLowerCase()))
+  )
+
+  // Filter folders in current level by search query
+  const currentFolderSubfolders = folders.filter(f => f.parent_id === currentFolderId)
+  const filteredFolders = currentFolderSubfolders.filter(folder =>
+    folder.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (folder.path && folder.path.toLowerCase().includes(searchQuery.toLowerCase()))
   )
 
   if (loading) {
@@ -306,26 +367,37 @@ export default function PhotoManager() {
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-1/2 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <button
-          onClick={handleMoveSelected}
-          disabled={selectedItems.length === 0}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap flex items-center gap-2 disabled:bg-blue-400 disabled:cursor-not-allowed"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-          </svg>
-          {t('ui.moveSelection')}
-        </button>
-        <button
-          onClick={handleDeleteSelected}
-          disabled={selectedItems.length === 0}
-          className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors whitespace-nowrap flex items-center gap-2 disabled:bg-red-400 disabled:cursor-not-allowed"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-          {t('ui.deleteSelection')}
-        </button>
+        {selectedItems.length > 0 && (
+          <>
+            <button
+              onClick={handleCopySelected}
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors whitespace-nowrap flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              {t('common.copy')}
+            </button>
+            <button
+              onClick={handleMoveSelected}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+              </svg>
+              {t('common.move')}
+            </button>
+            <button
+              onClick={handleDeleteSelected}
+              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors whitespace-nowrap flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              {t('common.delete')}
+            </button>
+          </>
+        )}
       </div>
 
       {/* Stats Bar */}
@@ -347,11 +419,11 @@ export default function PhotoManager() {
               className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors font-medium"
             >
               {(() => {
-                const currentFolderChildren = folders.filter(f => f.parent_id === currentFolderId)
-                const currentFolderPhotos = filteredPhotos.filter(p => p.folder_id === currentFolderId)
+                // filteredFolders and filteredPhotos already contain only current folder items matching search
+                // Exclude level 1 folders (parent_id === null) from selection
                 const allIds = [
-                  ...currentFolderChildren.map(f => `folder-${f.path}`),
-                  ...currentFolderPhotos.map(p => `photo-${p.id}`)
+                  ...filteredFolders.filter(f => f.parent_id !== null).map(f => `folder-${f.path}`),
+                  ...filteredPhotos.map(p => `photo-${p.id}`)
                 ]
                 const areAllSelected = allIds.length > 0 && allIds.every(id => selectedItems.includes(id))
                 return areAllSelected ? t('ui.deselectAll') : t('ui.selectAll')
@@ -372,7 +444,7 @@ export default function PhotoManager() {
       <div className="bg-white rounded-lg shadow p-6">
         <PhotoTreeView
           photos={filteredPhotos}
-          folders={folders}
+          folders={filteredFolders}
           onPhotoClick={setSelectedPhoto}
           selectedItems={selectedItems}
           onToggleSelect={handleToggleSelect}
@@ -383,6 +455,8 @@ export default function PhotoManager() {
           onDeleteItems={handleDeleteItems}
           onMoveItems={handleMoveItems}
           rootFolder={rootFolder}
+          allFolders={folders}
+          allPhotos={photos}
         />
       </div>
 
@@ -491,6 +565,20 @@ export default function PhotoManager() {
         selectedItems={selectedItems}
         onFolderCreated={loadPhotos}
         rootFolder={rootFolder}
+      />
+
+      {/* Copy To Folder Modal */}
+      <MoveToFolderModal
+        isOpen={showCopyModal}
+        onClose={() => setShowCopyModal(false)}
+        onConfirm={confirmCopy}
+        photos={photos}
+        folders={folders}
+        selectedItems={selectedItems}
+        onFolderCreated={loadPhotos}
+        rootFolder={rootFolder}
+        title="ui.copyItems"
+        buttonText="ui.copyHere"
       />
     </div>
   )

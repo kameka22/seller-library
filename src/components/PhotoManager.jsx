@@ -304,7 +304,7 @@ export default function PhotoManager() {
       setScanning(true)
       setError(null)
 
-      const result = await photosAPI.moveItems(photoIds, movingFolders, destinationPath, textFileIds)
+      const result = await photosAPI.moveItems(photoIds, textFileIds, movingFolders, destinationPath)
 
       // Close modal first
       setShowMoveModal(false)
@@ -358,7 +358,7 @@ export default function PhotoManager() {
       setScanning(true)
       setError(null)
 
-      const result = await photosAPI.copyItems(photoIds, copyingFolders, destinationPath, textFileIds)
+      const result = await photosAPI.copyItems(photoIds, textFileIds, copyingFolders, destinationPath)
 
       // Close modal first
       setShowCopyModal(false)

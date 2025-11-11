@@ -46,15 +46,41 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [folders, folderMap])
 
+  // Get selected folder paths for filtering
+  const selectedFolderPaths = useMemo(() => {
+    return selectedItems
+      .filter(id => id.startsWith('folder-'))
+      .map(id => id.replace('folder-', ''))
+  }, [selectedItems])
+
   // Get current folder data
   const currentFolder = useMemo(() => {
+    let children = []
+
     if (currentFolderId === null) {
       // At root level
+      children = rootFolders
+    } else {
+      const folder = folderMap.get(currentFolderId)
+      if (!folder) {
+        children = rootFolders
+      } else {
+        children = folder.children
+          .map(id => folderMap.get(id))
+          .filter(Boolean)
+          .sort((a, b) => a.name.localeCompare(b.name))
+      }
+    }
+
+    // Filter out folders that are being moved
+    const filteredChildren = children.filter(child => !selectedFolderPaths.includes(child.path))
+
+    if (currentFolderId === null) {
       return {
         id: null,
         name: t('ui.root'),
         path: '/',
-        children: rootFolders
+        children: filteredChildren
       }
     }
 
@@ -64,15 +90,15 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
         id: null,
         name: t('ui.root'),
         path: '/',
-        children: rootFolders
+        children: filteredChildren
       }
     }
 
     return {
       ...folder,
-      children: folder.children.map(id => folderMap.get(id)).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name))
+      children: filteredChildren
     }
-  }, [currentFolderId, folderMap, rootFolders, t])
+  }, [currentFolderId, folderMap, rootFolders, t, selectedFolderPaths])
 
   // Build breadcrumb trail
   const breadcrumb = useMemo(() => {
@@ -127,9 +153,31 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
       return false
     }
 
-    // Check if trying to move a folder into itself or its descendants
+    // Check if any items are already in this folder (would be a no-op move)
     const movingFolders = selectedItems.filter(id => id.startsWith('folder-'))
+    const movingPhotos = selectedItems.filter(id => id.startsWith('photo-'))
 
+    // Check if photos are already in current folder
+    for (const photoId of movingPhotos) {
+      const photoIdNum = parseInt(photoId.replace('photo-', ''))
+      const photo = photos.find(p => p.id === photoIdNum)
+      if (photo && photo.folder_id === currentFolderId) {
+        // At least one photo is already in this folder
+        return false
+      }
+    }
+
+    // Check if folders are already in current folder (parent_id matches)
+    for (const folderId of movingFolders) {
+      const folderPath = folderId.replace('folder-', '')
+      const folder = folders.find(f => f.path === folderPath)
+      if (folder && folder.parent_id === currentFolderId) {
+        // At least one folder is already in this folder
+        return false
+      }
+    }
+
+    // Check if trying to move a folder into itself or its descendants
     for (const folderId of movingFolders) {
       const folderPath = folderId.replace('folder-', '')
 

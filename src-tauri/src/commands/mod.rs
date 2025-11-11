@@ -1487,27 +1487,34 @@ fn ensure_folder_in_db<'a>(
         }
 
         // Determine parent_id by recursively ensuring parent folder exists
-        // BUT stop at root_path (root_path itself has parent_id = NULL)
+        // BUT stop at root_path (folders directly under root_path have parent_id = NULL)
         let parent_id: Option<i64> = if folder_path == root_path {
-            // This is the root folder, it has no parent
-            None
+            // This is the root folder itself - should not be created in database
+            return Err(format!("Cannot create root folder in database: {}", folder_path));
         } else if let Some(parent) = path_obj.parent() {
             let parent_path = parent.to_string_lossy().to_string();
 
             // Only create parent if it's not empty, exists on filesystem, and is not above root
             if !parent_path.is_empty() && parent.exists() {
-                // Check if parent is at or below root_path
-                let parent_path_obj = Path::new(&parent_path);
-                let root_path_obj = Path::new(root_path);
-
-                if parent_path_obj.starts_with(root_path_obj) || parent_path == root_path {
-                    match ensure_folder_in_db(pool, &parent_path, root_path).await {
-                        Ok(parent_id) => Some(parent_id),
-                        Err(_) => None, // If parent fails, use NULL (root level)
-                    }
-                } else {
-                    // Parent is above root, so this folder should be at root level
+                // Check if parent is the root_path
+                if parent_path == root_path {
+                    // Parent is root_path, so this folder is at level 1 and should have parent_id = NULL
                     None
+                } else {
+                    // Check if parent is below root_path
+                    let parent_path_obj = Path::new(&parent_path);
+                    let root_path_obj = Path::new(root_path);
+
+                    if parent_path_obj.starts_with(root_path_obj) {
+                        // Parent is below root, recursively ensure it exists
+                        match ensure_folder_in_db(pool, &parent_path, root_path).await {
+                            Ok(parent_id) => Some(parent_id),
+                            Err(_) => None, // If parent fails, use NULL (root level)
+                        }
+                    } else {
+                        // Parent is above root, so this folder should be at root level
+                        None
+                    }
                 }
             } else {
                 None

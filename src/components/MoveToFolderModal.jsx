@@ -7,6 +7,7 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
   const [currentFolderId, setCurrentFolderId] = useState(null) // null = root
   const [isCreatingFolder, setIsCreatingFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
+  const [pendingFolderPath, setPendingFolderPath] = useState(null) // Path of folder to navigate to after creation
 
   // Reset state when modal closes
   useEffect(() => {
@@ -14,8 +15,20 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
       setCurrentFolderId(null)
       setIsCreatingFolder(false)
       setNewFolderName('')
+      setPendingFolderPath(null)
     }
   }, [isOpen])
+
+  // Navigate to newly created folder once it appears in folders list
+  useEffect(() => {
+    if (pendingFolderPath && folders.length > 0) {
+      const newFolder = folders.find(f => f.path === pendingFolderPath)
+      if (newFolder) {
+        setCurrentFolderId(newFolder.id)
+        setPendingFolderPath(null)
+      }
+    }
+  }, [pendingFolderPath, folders])
 
   // Build folder map with parent-child relationships
   const folderMap = useMemo(() => {
@@ -131,15 +144,15 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
 
       const newFolderPath = parentPath ? `${parentPath}/${newFolderName.trim()}` : `/${newFolderName.trim()}`
 
-      const result = await photosAPI.createFolder(newFolderPath)
+      await photosAPI.createFolder(newFolderPath)
+
+      // Store the path to navigate to after reload
+      setPendingFolderPath(newFolderPath)
 
       // Notify parent to reload folders
       if (onFolderCreated) {
         await onFolderCreated()
       }
-
-      // Navigate to the newly created folder
-      setCurrentFolderId(result.id)
 
       setIsCreatingFolder(false)
       setNewFolderName('')

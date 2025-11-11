@@ -294,8 +294,8 @@ export default function PhotoManager() {
       // Reload photos
       await loadPhotos()
 
-      // Reset current path to show root (where user can see the changes)
-      setCurrentPath([])
+      // Reset to root folder (where user can see the changes)
+      setCurrentFolderId(null)
 
       // Clear selection
       setSelectedItems([])

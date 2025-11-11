@@ -13,6 +13,8 @@ export default function UserSettings() {
   })
   const [isSaving, setIsSaving] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [scanning, setScanning] = useState(false)
+  const [syncMessage, setSyncMessage] = useState(null)
 
   useEffect(() => {
     // Load user info from database
@@ -99,6 +101,44 @@ export default function UserSettings() {
     // Change language immediately when selected
     if (field === 'language') {
       changeLanguage(value)
+    }
+  }
+
+  const handleSyncDatabase = async () => {
+    try {
+      setScanning(true)
+      setSyncMessage(null)
+      const result = await photosAPI.syncDatabase()
+
+      const messages = []
+      if (result.photos_removed > 0) {
+        messages.push(`${result.photos_removed} ${t('ui.photosRemoved')}`)
+      }
+      if (result.photos_updated > 0) {
+        messages.push(`${result.photos_updated} ${t('ui.photosUpdated')}`)
+      }
+      if (result.folders_cleaned > 0) {
+        messages.push(`${result.folders_cleaned} ${t('ui.foldersRemoved')}`)
+      }
+
+      if (messages.length > 0) {
+        setSyncMessage(messages.join(', '))
+      } else {
+        setSyncMessage(t('ui.noChanges'))
+      }
+
+      if (result.errors && result.errors.length > 0) {
+        console.error('Sync errors:', result.errors)
+      }
+
+      // Clear message after 5 seconds
+      setTimeout(() => setSyncMessage(null), 5000)
+    } catch (err) {
+      console.error('Error syncing database:', err)
+      setSyncMessage(t('photoManager.syncError'))
+      setTimeout(() => setSyncMessage(null), 5000)
+    } finally {
+      setScanning(false)
     }
   }
 
@@ -206,6 +246,33 @@ export default function UserSettings() {
             )}
           </div>
         </form>
+      </div>
+
+      {/* Database Synchronization Section */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-2">
+          {t('ui.syncDatabase')}
+        </h3>
+        <p className="text-sm text-gray-600 mb-4">
+          {t('ui.syncDatabaseDescription')}
+        </p>
+
+        <button
+          onClick={handleSyncDatabase}
+          disabled={scanning}
+          className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:bg-green-400 flex items-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          {scanning ? t('common.loading') : t('ui.syncDatabase')}
+        </button>
+
+        {syncMessage && (
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 text-blue-700 rounded-md text-sm">
+            {syncMessage}
+          </div>
+        )}
       </div>
     </div>
   )

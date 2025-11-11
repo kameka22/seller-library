@@ -367,6 +367,8 @@
     "photosRemoved": "photo(s) supprimée(s)",
     "photosUpdated": "photo(s) mise(s) à jour",
     "foldersRemoved": "dossier(s) supprimé(s)",
-    "rootFolder": "Dossier principal"
+    "rootFolder": "Dossier principal",
+    "syncDatabaseDescription": "Synchronisez la base de données avec le système de fichiers pour détecter les nouvelles photos et dossiers, supprimer les éléments effacés et mettre à jour la hiérarchie des dossiers.",
+    "noChanges": "Aucun changement détecté. La base de données est à jour."
   }
 }

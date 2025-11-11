@@ -367,6 +367,8 @@
     "photosRemoved": "photo(s) removed",
     "photosUpdated": "photo(s) updated",
     "foldersRemoved": "folder(s) removed",
-    "rootFolder": "Main Folder"
+    "rootFolder": "Main Folder",
+    "syncDatabaseDescription": "Synchronize the database with the file system to detect new photos and folders, remove deleted items, and update folder hierarchy.",
+    "noChanges": "No changes detected. Database is up to date."
   }
 }

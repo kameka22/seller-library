@@ -295,49 +295,60 @@ export default function PhotoManager() {
           placeholder={t('placeholders.photoSearch')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-1/2 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
-          onClick={handleSyncDatabase}
-          disabled={scanning}
-          className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors whitespace-nowrap flex items-center gap-2 disabled:bg-green-400"
+          onClick={handleMoveSelected}
+          disabled={selectedItems.length === 0}
+          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap flex items-center gap-2 disabled:bg-blue-400 disabled:cursor-not-allowed"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
           </svg>
-          {t('ui.syncDatabase')}
+          {t('ui.moveSelection')}
+        </button>
+        <button
+          onClick={handleDeleteSelected}
+          disabled={selectedItems.length === 0}
+          className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors whitespace-nowrap flex items-center gap-2 disabled:bg-red-400 disabled:cursor-not-allowed"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          {t('ui.deleteSelection')}
         </button>
       </div>
 
       {/* Stats Bar */}
       <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex gap-6 text-sm">
+        <div className="flex gap-6 text-sm items-center">
           <div>
             <span className="text-gray-500">Total:</span>
             <span className="ml-2 font-semibold text-gray-900">{photos.length} {t('ui.photosLowercase')}</span>
           </div>
           {selectedItems.length > 0 && (
-            <>
-              <div>
-                <span className="text-gray-500">{t('ui.selected')}</span>
-                <span className="ml-2 font-semibold text-blue-600">{selectedItems.length} {t('ui.items')}</span>
-              </div>
-              <div className="ml-auto flex gap-2">
-                <button
-                  onClick={handleMoveSelected}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium"
-                >
-                  {t('ui.moveSelection')}
-                </button>
-                <button
-                  onClick={handleDeleteSelected}
-                  className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors font-medium"
-                >
-                  {t('ui.deleteSelection')}
-                </button>
-              </div>
-            </>
+            <div>
+              <span className="text-gray-500">{t('ui.selected')}</span>
+              <span className="ml-2 font-semibold text-blue-600">{selectedItems.length} {t('ui.items')}</span>
+            </div>
           )}
+          <div className="ml-auto">
+            <button
+              onClick={handleSelectAll}
+              className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors font-medium"
+            >
+              {(() => {
+                const currentFolderChildren = folders.filter(f => f.parent_id === currentFolderId)
+                const currentFolderPhotos = filteredPhotos.filter(p => p.folder_id === currentFolderId)
+                const allIds = [
+                  ...currentFolderChildren.map(f => `folder-${f.path}`),
+                  ...currentFolderPhotos.map(p => `photo-${p.id}`)
+                ]
+                const areAllSelected = allIds.length > 0 && allIds.every(id => selectedItems.includes(id))
+                return areAllSelected ? t('ui.deselectAll') : t('ui.selectAll')
+              })()}
+            </button>
+          </div>
         </div>
       </div>
 

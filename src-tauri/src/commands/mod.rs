@@ -1,4 +1,4 @@
-use crate::models::{Object, CreateObject, UpdateObject, Photo, Platform, CreatePlatform, UpdatePlatform, ObjectPhoto, ObjectPlatform, Category, CreateCategory, Folder};
+use crate::models::{Object, CreateObject, UpdateObject, Photo, Platform, CreatePlatform, UpdatePlatform, ObjectPhoto, ObjectPlatform, Category, CreateCategory, Folder, TextFile};
 use sqlx::SqlitePool;
 use tauri::State;
 use serde::{Deserialize, Serialize};
@@ -162,6 +162,12 @@ fn scan_directory_recursive<'a>(
                     scan_directory_recursive(pool, &path, root_path, count, errors).await?;
                 } else if is_image_file(&path) {
                     if let Err(e) = import_photo(pool, &path, root_path).await {
+                        errors.push(format!("{}: {}", path.display(), e));
+                    } else {
+                        *count += 1;
+                    }
+                } else if is_text_file(&path) {
+                    if let Err(e) = import_text_file(pool, &path, root_path).await {
                         errors.push(format!("{}: {}", path.display(), e));
                     } else {
                         *count += 1;
@@ -661,6 +667,161 @@ pub async fn dissociate_photo(pool: State<'_, SqlitePool>, id: i64) -> Result<()
     } else {
         Ok(())
     }
+}
+
+// ========== TEXT FILES COMMANDS ==========
+
+#[tauri::command]
+pub async fn list_text_files(pool: State<'_, SqlitePool>) -> Result<Vec<TextFile>, String> {
+    sqlx::query_as::<_, TextFile>("SELECT * FROM text_files ORDER BY created_at DESC")
+        .fetch_all(pool.inner())
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_text_file_content(
+    pool: State<'_, SqlitePool>,
+    file_id: i64,
+) -> Result<String, String> {
+    // Get the text file from the database
+    let text_file = sqlx::query_as::<_, TextFile>("SELECT * FROM text_files WHERE id = ?")
+        .bind(file_id)
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "Text file not found".to_string())?;
+
+    // Read the file content from the filesystem
+    fs::read_to_string(&text_file.file_path)
+        .map_err(|e| format!("Failed to read file: {}", e))
+}
+
+#[tauri::command]
+pub async fn save_text_file_content(
+    pool: State<'_, SqlitePool>,
+    file_id: i64,
+    content: String,
+) -> Result<(), String> {
+    // Get the text file from the database
+    let text_file = sqlx::query_as::<_, TextFile>("SELECT * FROM text_files WHERE id = ?")
+        .bind(file_id)
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "Text file not found".to_string())?;
+
+    // Write the content to the filesystem
+    fs::write(&text_file.file_path, content)
+        .map_err(|e| format!("Failed to write file: {}", e))?;
+
+    // Update file size and updated_at in database
+    let metadata = fs::metadata(&text_file.file_path)
+        .map_err(|e| format!("Failed to get file metadata: {}", e))?;
+    let file_size = metadata.len() as i64;
+
+    sqlx::query("UPDATE text_files SET file_size = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+        .bind(file_size)
+        .bind(file_id)
+        .execute(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn delete_text_file(pool: State<'_, SqlitePool>, file_id: i64) -> Result<(), String> {
+    // Get the file path before deleting from the DB
+    let text_file = sqlx::query_as::<_, TextFile>("SELECT * FROM text_files WHERE id = ?")
+        .bind(file_id)
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if let Some(text_file) = text_file {
+        // Delete the physical file
+        if Path::new(&text_file.file_path).exists() {
+            fs::remove_file(&text_file.file_path)
+                .map_err(|e| format!("Failed to delete file: {}", e))?;
+        }
+
+        // Delete from the database
+        let result = sqlx::query("DELETE FROM text_files WHERE id = ?")
+            .bind(file_id)
+            .execute(pool.inner())
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if result.rows_affected() == 0 {
+            Err("Text file not found in database".to_string())
+        } else {
+            Ok(())
+        }
+    } else {
+        Err("Text file not found".to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn delete_text_file_db_only(pool: State<'_, SqlitePool>, file_id: i64) -> Result<(), String> {
+    // Delete from the database only (without deleting the physical file)
+    let result = sqlx::query("DELETE FROM text_files WHERE id = ?")
+        .bind(file_id)
+        .execute(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if result.rows_affected() == 0 {
+        Err("Text file not found in database".to_string())
+    } else {
+        Ok(())
+    }
+}
+
+fn is_text_file(path: &Path) -> bool {
+    if let Some(ext) = path.extension() {
+        let ext = ext.to_string_lossy().to_lowercase();
+        matches!(ext.as_str(), "txt" | "md")
+    } else {
+        false
+    }
+}
+
+async fn import_text_file(pool: &SqlitePool, path: &Path, root_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let file_path = path.to_string_lossy().to_string();
+    let file_name = path.file_name()
+        .ok_or("Invalid file name")?
+        .to_string_lossy()
+        .to_string();
+
+    let metadata = fs::metadata(path)?;
+    let file_size = metadata.len() as i64;
+
+    // Get parent folder path
+    let folder_path = if let Some(parent) = path.parent() {
+        parent.to_string_lossy().to_string()
+    } else {
+        return Err("Could not determine parent folder".into());
+    };
+
+    // Ensure folder exists in database with proper hierarchy limited to root_path
+    let root_path_str = root_path.to_string_lossy().to_string();
+    let folder_id = ensure_folder_in_db(pool, &folder_path, &root_path_str).await
+        .map_err(|e| format!("Failed to ensure folder in DB: {}", e))?;
+
+    sqlx::query(
+        "INSERT OR IGNORE INTO text_files (file_path, file_name, file_size, folder_id)
+         VALUES (?, ?, ?, ?)"
+    )
+    .bind(&file_path)
+    .bind(&file_name)
+    .bind(file_size)
+    .bind(folder_id)
+    .execute(pool)
+    .await?;
+
+    Ok(())
 }
 
 // ========== PLATFORMS COMMANDS ==========
@@ -1800,6 +1961,8 @@ pub async fn delete_folder_from_db(
 pub struct SyncDatabaseResult {
     pub photos_removed: i32,
     pub photos_updated: i32,
+    pub text_files_removed: i32,
+    pub text_files_updated: i32,
     pub folders_cleaned: i32,
     pub errors: Vec<String>,
 }
@@ -1808,6 +1971,8 @@ pub struct SyncDatabaseResult {
 pub async fn sync_database(pool: State<'_, SqlitePool>) -> Result<SyncDatabaseResult, String> {
     let mut photos_removed = 0;
     let mut photos_updated = 0;
+    let mut text_files_removed = 0;
+    let mut text_files_updated = 0;
     let mut folders_cleaned = 0;
     let mut errors = Vec::new();
 
@@ -1867,6 +2032,54 @@ pub async fn sync_database(pool: State<'_, SqlitePool>) -> Result<SyncDatabaseRe
         }
     }
 
+    // Get all text files from database
+    let text_files = sqlx::query_as::<_, TextFile>("SELECT * FROM text_files")
+        .fetch_all(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Check each text file
+    for text_file in text_files {
+        let file_path = Path::new(&text_file.file_path);
+
+        if !file_path.exists() {
+            // Text file doesn't exist, remove from database
+            match sqlx::query("DELETE FROM text_files WHERE id = ?")
+                .bind(text_file.id)
+                .execute(pool.inner())
+                .await
+            {
+                Ok(_) => text_files_removed += 1,
+                Err(e) => errors.push(format!("Failed to remove text file {}: {}", text_file.id, e)),
+            }
+        } else {
+            // Text file exists, ensure folder_id is correct
+            if let Some(parent) = file_path.parent() {
+                let folder_path = parent.to_string_lossy().to_string();
+
+                // Use root_path if available, otherwise use folder_path itself as root
+                let effective_root = if !root_path.is_empty() { &root_path } else { &folder_path };
+                match ensure_folder_in_db(pool.inner(), &folder_path, effective_root).await {
+                    Ok(folder_id) => {
+                        // Update text file's folder_id if different
+                        if text_file.folder_id != Some(folder_id) {
+                            match sqlx::query("UPDATE text_files SET folder_id = ? WHERE id = ?")
+                                .bind(folder_id)
+                                .bind(text_file.id)
+                                .execute(pool.inner())
+                                .await
+                            {
+                                Ok(_) => text_files_updated += 1,
+                                Err(e) => errors.push(format!("Failed to update text file {}: {}", text_file.id, e)),
+                            }
+                        }
+                    }
+                    Err(e) => errors.push(format!("Failed to ensure folder for text file {}: {}", text_file.id, e)),
+                }
+            }
+        }
+    }
+
     // Scan and create all folders, then rebuild hierarchy based on root_path
     if !root_path.is_empty() {
         match scan_and_create_folders(pool.inner(), &root_path).await {
@@ -1897,11 +2110,12 @@ pub async fn sync_database(pool: State<'_, SqlitePool>) -> Result<SyncDatabaseRe
         }
     }
 
-    // Clean up empty folders (folders with no photos)
+    // Clean up empty folders (folders with no photos and no text files)
     let empty_folders = sqlx::query_as::<_, Folder>(
         "SELECT f.* FROM folders f
          LEFT JOIN photos p ON p.folder_id = f.id
-         WHERE p.id IS NULL"
+         LEFT JOIN text_files t ON t.folder_id = f.id
+         WHERE p.id IS NULL AND t.id IS NULL"
     )
     .fetch_all(pool.inner())
     .await
@@ -1926,6 +2140,8 @@ pub async fn sync_database(pool: State<'_, SqlitePool>) -> Result<SyncDatabaseRe
     Ok(SyncDatabaseResult {
         photos_removed,
         photos_updated,
+        text_files_removed,
+        text_files_updated,
         folders_cleaned,
         errors,
     })

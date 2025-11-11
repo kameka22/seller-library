@@ -137,6 +137,27 @@ pub async fn init_db() -> Result<SqlitePool, sqlx::Error> {
         }
     }
 
+    // Migration 006: Add text_files table
+    let migration_sql_006 = include_str!("../migrations/006_add_text_files_table.sql");
+    let lines_006: Vec<&str> = migration_sql_006.lines().collect();
+    let mut current_statement_006 = String::new();
+
+    for line in lines_006 {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with("--") {
+            continue;
+        }
+        current_statement_006.push_str(line);
+        current_statement_006.push(' ');
+        if trimmed.ends_with(';') {
+            let stmt = current_statement_006.trim().trim_end_matches(';');
+            if !stmt.is_empty() {
+                let _ = sqlx::query(stmt).execute(&pool).await;
+            }
+            current_statement_006.clear();
+        }
+    }
+
     println!("Database initialized successfully at {}", db_path.display());
     Ok(pool)
 }

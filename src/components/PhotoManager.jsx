@@ -472,18 +472,35 @@ export default function PhotoManager() {
   )
 
   // Determine if "Create Object" button should be visible
-  // Visible only in subfolders of root category folders
+  // Visible only in subfolders of the "categories" folder at root level
   const shouldShowCreateObjectButton = useMemo(() => {
     if (currentFolderId === null) return false // Not at root level
 
     const currentFolder = folders.find(f => f.id === currentFolderId)
     if (!currentFolder) return false
 
-    // Check if parent exists and is a root folder (parent_id === null)
-    if (currentFolder.parent_id === null) return false // We are at a root category folder
+    // We are at a root folder, button should not be visible
+    if (currentFolder.parent_id === null) return false
 
-    const parentFolder = folders.find(f => f.id === currentFolder.parent_id)
-    if (!parentFolder || parentFolder.parent_id !== null) return false // Parent is not a root folder
+    // Find the root ancestor by going up the parent chain
+    let ancestorId = currentFolder.parent_id
+    let rootAncestor = null
+
+    while (ancestorId !== null) {
+      const ancestor = folders.find(f => f.id === ancestorId)
+      if (!ancestor) break
+
+      if (ancestor.parent_id === null) {
+        // Found the root ancestor
+        rootAncestor = ancestor
+        break
+      }
+
+      ancestorId = ancestor.parent_id
+    }
+
+    // Check if root ancestor is named "categories"
+    if (!rootAncestor || rootAncestor.name.toLowerCase() !== 'categories') return false
 
     // Check if there's at least one photo or text file selected
     const hasPhotos = selectedItems.some(id => id.startsWith('photo-'))

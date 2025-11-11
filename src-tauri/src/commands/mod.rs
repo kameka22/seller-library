@@ -866,6 +866,7 @@ pub async fn create_category(
     pool: State<'_, SqlitePool>,
     category: CreateCategory,
 ) -> Result<Category, String> {
+    // Insert category in database
     let result = sqlx::query("INSERT INTO categories (name) VALUES (?)")
         .bind(&category.name)
         .execute(pool.inner())
@@ -873,6 +874,52 @@ pub async fn create_category(
         .map_err(|e| e.to_string())?;
 
     let id = result.last_insert_rowid();
+
+    // Get root folder path
+    let root_folder = sqlx::query_scalar::<_, String>(
+        "SELECT value FROM settings WHERE key = 'root_folder'"
+    )
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if let Some(root_path) = root_folder {
+        // Find the "categories" folder in database
+        let categories_folder = sqlx::query_as::<_, Folder>(
+            "SELECT * FROM folders WHERE name = 'categories' AND parent_id IS NULL"
+        )
+            .fetch_optional(pool.inner())
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if let Some(categories_folder) = categories_folder {
+            // Create physical folder for the category
+            let category_folder_path = Path::new(&root_path)
+                .join("categories")
+                .join(&category.name);
+
+            // Create the physical folder if it doesn't exist
+            if !category_folder_path.exists() {
+                fs::create_dir_all(&category_folder_path)
+                    .map_err(|e| format!("Failed to create category folder: {}", e))?;
+            }
+
+            // Create folder entry in database
+            let folder_path_str = category_folder_path
+                .to_str()
+                .ok_or_else(|| "Invalid path".to_string())?;
+
+            sqlx::query(
+                "INSERT OR IGNORE INTO folders (path, name, parent_id) VALUES (?, ?, ?)"
+            )
+                .bind(folder_path_str)
+                .bind(&category.name)
+                .bind(categories_folder.id)
+                .execute(pool.inner())
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+    }
 
     sqlx::query_as::<_, Category>("SELECT * FROM categories WHERE id = ?")
         .bind(id)

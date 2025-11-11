@@ -42,6 +42,13 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
 
   // Navigate to pending folder when it appears in folderMap
   useEffect(() => {
+    console.log('[MoveToFolderModal] useEffect triggered!', {
+      pendingNavigationId,
+      folderMapSize: folderMap.size,
+      foldersLength: folders.length,
+      hasPendingFolder: pendingNavigationId ? folderMap.has(pendingNavigationId) : false
+    })
+
     if (pendingNavigationId && folderMap.has(pendingNavigationId)) {
       console.log('[MoveToFolderModal] Pending folder found in map, navigating to ID:', pendingNavigationId)
       console.log('[MoveToFolderModal] FolderMap size:', folderMap.size)
@@ -52,6 +59,7 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
       console.log('[MoveToFolderModal] Waiting for pending folder ID:', pendingNavigationId)
       console.log('[MoveToFolderModal] FolderMap size:', folderMap.size)
       console.log('[MoveToFolderModal] FolderMap has ID?', folderMap.has(pendingNavigationId))
+      console.log('[MoveToFolderModal] FolderMap keys:', Array.from(folderMap.keys()))
     }
   }, [pendingNavigationId, folderMap, folders])
 

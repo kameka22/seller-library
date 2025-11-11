@@ -1241,6 +1241,20 @@ pub async fn import_photos(
     fs::create_dir_all(&import_folder)
         .map_err(|e| format!("Failed to create import folder: {}", e))?;
 
+    // Get root folder from settings to determine folder_id
+    let root_folder: Option<(String,)> = sqlx::query_as("SELECT value FROM settings WHERE key = 'root_folder'")
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let root_path = root_folder.map(|(value,)| value).unwrap_or_default();
+
+    // Ensure the import folder exists in DB and get its folder_id
+    let import_folder_path = import_folder.to_string_lossy().to_string();
+    let folder_id = ensure_folder_in_db(pool.inner(), &import_folder_path, &root_path)
+        .await
+        .map_err(|e| format!("Failed to ensure folder in database: {}", e))?;
+
     // Write description file if provided
     if let Some(desc) = description {
         if !desc.trim().is_empty() {
@@ -1318,8 +1332,8 @@ pub async fn import_photos(
                     // Insert into database only if not exists
                     // Use file_path for both file_path AND original_path since the photo is now in its final location
                     match sqlx::query(
-                        "INSERT INTO photos (file_path, original_path, file_name, file_size, width, height)
-                         VALUES (?, ?, ?, ?, ?, ?)"
+                        "INSERT INTO photos (file_path, original_path, file_name, file_size, width, height, folder_id)
+                         VALUES (?, ?, ?, ?, ?, ?, ?)"
                     )
                     .bind(&file_path)
                     .bind(&file_path) // Use destination path as original_path, not source path
@@ -1327,6 +1341,7 @@ pub async fn import_photos(
                     .bind(file_size)
                     .bind(width)
                     .bind(height)
+                    .bind(folder_id)
                     .execute(pool.inner())
                     .await {
                         Ok(_) => {

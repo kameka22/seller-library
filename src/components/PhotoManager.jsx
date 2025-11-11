@@ -144,11 +144,11 @@ export default function PhotoManager() {
       // Delete folders
       for (const folderId of folders) {
         const folderPath = folderId.replace('folder-', '')
-        const absolutePath = '/' + folderPath
+        // folderPath is already an absolute path, no need to add '/'
         try {
           const result = deletePhysicalFiles
-            ? await photosAPI.deleteFolder(absolutePath)
-            : await photosAPI.deleteFolderDbOnly(absolutePath)
+            ? await photosAPI.deleteFolder(folderPath)
+            : await photosAPI.deleteFolderDbOnly(folderPath)
           deletedCount += result.deleted
           if (result.errors && result.errors.length > 0) {
             errors = errors.concat(result.errors)
@@ -276,7 +276,7 @@ export default function PhotoManager() {
   const confirmMove = async (destinationPath) => {
     const folders = selectedItems
       .filter(id => id.startsWith('folder-'))
-      .map(id => '/' + id.replace('folder-', '')) // Add "/" prefix for absolute paths
+      .map(id => id.replace('folder-', '')) // Path is already absolute
 
     const photoIds = selectedItems
       .filter(id => id.startsWith('photo-'))

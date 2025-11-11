@@ -1342,6 +1342,20 @@ pub async fn move_photos_and_folders(
         }
     }
 
+    // Rebuild folder hierarchy to ensure correct parent_id values after moving folders
+    // Get root folder from settings
+    let root_folder: Option<(String,)> = sqlx::query_as("SELECT value FROM settings WHERE key = 'root_folder'")
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if let Some((root_path,)) = root_folder {
+        match rebuild_folder_hierarchy(pool.inner(), &root_path).await {
+            Ok(_) => {},
+            Err(e) => errors.push(format!("Failed to rebuild folder hierarchy: {}", e)),
+        }
+    }
+
     Ok(MoveItemsResult {
         moved: moved_count,
         errors,

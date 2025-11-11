@@ -577,7 +577,8 @@ export default function PhotoManager() {
         selectedItems={selectedItems}
         onFolderCreated={loadPhotos}
         rootFolder={rootFolder}
-        title={t('ui.copyTo')}
+        title="ui.copyItems"
+        buttonText="ui.copyHere"
       />
     </div>
   )

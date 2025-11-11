@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { photosAPI } from '../utils/api'
 
-export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, folders = [], selectedItems, onFolderCreated, rootFolder }) {
+export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, folders = [], selectedItems, onFolderCreated, rootFolder, title = 'ui.moveItems', buttonText = 'ui.moveHere' }) {
   const { t } = useLanguage()
   const [currentFolderId, setCurrentFolderId] = useState(null) // null = root
   const [isCreatingFolder, setIsCreatingFolder] = useState(false)
@@ -213,7 +213,7 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 border-b">
-          <h2 className="text-xl font-semibold">{t('ui.moveItems')}</h2>
+          <h2 className="text-xl font-semibold">{t(title)}</h2>
           <p className="text-sm text-gray-600 mt-1">{t('ui.selectDestination')}</p>
         </div>
 
@@ -340,7 +340,7 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
               disabled={!canMoveToCurrentFolder()}
               className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
-              {t('ui.moveHere')}
+              {t(buttonText)}
             </button>
           </div>
         </div>

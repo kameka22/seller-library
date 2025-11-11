@@ -19,6 +19,7 @@ export default function PhotoManager() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showMoveModal, setShowMoveModal] = useState(false)
+  const [showCopyModal, setShowCopyModal] = useState(false)
   const [deleteInfo, setDeleteInfo] = useState({ folders: 0, photos: 0 })
   const [deletePhysicalFiles, setDeletePhysicalFiles] = useState(true)
   const [currentFolderId, setCurrentFolderId] = useState(null) // null = root
@@ -283,6 +284,56 @@ export default function PhotoManager() {
     }
   }
 
+  const handleCopySelected = () => {
+    if (selectedItems.length === 0) return
+    setShowCopyModal(true)
+  }
+
+  const confirmCopy = async (destinationPath) => {
+    const copyingFolders = selectedItems
+      .filter(id => id.startsWith('folder-'))
+      .map(id => id.replace('folder-', '')) // Path is already absolute
+
+    const photoIds = selectedItems
+      .filter(id => id.startsWith('photo-'))
+      .map(id => parseInt(id.replace('photo-', '')))
+
+    try {
+      setScanning(true)
+      setError(null)
+
+      const result = await photosAPI.copyItems(photoIds, copyingFolders, destinationPath)
+
+      // Close modal first
+      setShowCopyModal(false)
+
+      // Reload photos
+      await loadPhotos()
+
+      // Navigate to destination folder to show the copied items
+      const destinationFolder = folders.find(f => f.path === destinationPath)
+      if (destinationFolder) {
+        setCurrentFolderId(destinationFolder.id)
+      } else {
+        // Fallback to root if destination folder not found
+        setCurrentFolderId(null)
+      }
+
+      // Clear selection
+      setSelectedItems([])
+
+      // Show success message if there were errors
+      if (result.errors && result.errors.length > 0) {
+        setError(`${t('ui.copySuccess')} - ${result.copied} ${t('ui.items')}. ${result.errors.length} ${t('ui.errorEncountered')}`)
+      }
+    } catch (err) {
+      console.error('Error copying items:', err)
+      setError(t('ui.copyError') + ': ' + (err.message || err))
+    } finally {
+      setScanning(false)
+    }
+  }
+
   // First filter by current folder (visual level), then apply search query
   const currentFolderPhotos = photos.filter(p => p.folder_id === currentFolderId)
   const filteredPhotos = currentFolderPhotos.filter(photo =>
@@ -318,6 +369,15 @@ export default function PhotoManager() {
         />
         {selectedItems.length > 0 && (
           <>
+            <button
+              onClick={handleCopySelected}
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors whitespace-nowrap flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              {t('common.copy')}
+            </button>
             <button
               onClick={handleMoveSelected}
               className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap flex items-center gap-2"
@@ -505,6 +565,19 @@ export default function PhotoManager() {
         selectedItems={selectedItems}
         onFolderCreated={loadPhotos}
         rootFolder={rootFolder}
+      />
+
+      {/* Copy To Folder Modal */}
+      <MoveToFolderModal
+        isOpen={showCopyModal}
+        onClose={() => setShowCopyModal(false)}
+        onConfirm={confirmCopy}
+        photos={photos}
+        folders={folders}
+        selectedItems={selectedItems}
+        onFolderCreated={loadPhotos}
+        rootFolder={rootFolder}
+        title={t('ui.copyTo')}
       />
     </div>
   )

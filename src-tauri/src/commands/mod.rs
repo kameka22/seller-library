@@ -930,6 +930,82 @@ pub async fn create_category(
 
 #[tauri::command]
 pub async fn delete_category(pool: State<'_, SqlitePool>, id: i64) -> Result<(), String> {
+    // First, get the category to retrieve its name
+    let category = sqlx::query_as::<_, Category>("SELECT * FROM categories WHERE id = ?")
+        .bind(id)
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "Category not found".to_string())?;
+
+    // Get root folder path
+    let root_folder = sqlx::query_scalar::<_, String>(
+        "SELECT value FROM settings WHERE key = 'root_folder'"
+    )
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if let Some(root_path) = root_folder {
+        // Build the category folder path
+        let category_folder_path = Path::new(&root_path)
+            .join("categories")
+            .join(&category.name);
+
+        // If the physical folder exists, delete it recursively
+        if category_folder_path.exists() {
+            fs::remove_dir_all(&category_folder_path)
+                .map_err(|e| format!("Failed to delete category folder: {}", e))?;
+        }
+
+        // Delete the folder entry from database (and cascade delete photos)
+        let folder_path_str = category_folder_path.to_str().ok_or_else(|| "Invalid path".to_string())?;
+
+        // Get the folder from database
+        let folder = sqlx::query_as::<_, Folder>("SELECT * FROM folders WHERE path = ?")
+            .bind(folder_path_str)
+            .fetch_optional(pool.inner())
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if let Some(folder) = folder {
+            // Delete all photos in this folder and its subfolders from database
+            // Get all folders in the tree (including the main folder and its descendants)
+            let all_folders = sqlx::query_as::<_, Folder>(
+                "WITH RECURSIVE folder_tree AS (
+                    SELECT id, path FROM folders WHERE id = ?
+                    UNION ALL
+                    SELECT f.id, f.path FROM folders f
+                    INNER JOIN folder_tree ft ON f.parent_id = ft.id
+                )
+                SELECT * FROM folders WHERE id IN (SELECT id FROM folder_tree)"
+            )
+                .bind(folder.id)
+                .fetch_all(pool.inner())
+                .await
+                .map_err(|e| e.to_string())?;
+
+            // Delete all photos from these folders
+            for folder in &all_folders {
+                sqlx::query("DELETE FROM photos WHERE folder_id = ?")
+                    .bind(folder.id)
+                    .execute(pool.inner())
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+
+            // Delete all folders from database
+            for folder in &all_folders {
+                sqlx::query("DELETE FROM folders WHERE id = ?")
+                    .bind(folder.id)
+                    .execute(pool.inner())
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+    }
+
+    // Finally, delete the category from database
     let result = sqlx::query("DELETE FROM categories WHERE id = ?")
         .bind(id)
         .execute(pool.inner())
@@ -1165,6 +1241,20 @@ pub async fn import_photos(
     fs::create_dir_all(&import_folder)
         .map_err(|e| format!("Failed to create import folder: {}", e))?;
 
+    // Get root folder from settings to determine folder_id
+    let root_folder: Option<(String,)> = sqlx::query_as("SELECT value FROM settings WHERE key = 'root_folder'")
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let root_path = root_folder.map(|(value,)| value).unwrap_or_default();
+
+    // Ensure the import folder exists in DB and get its folder_id
+    let import_folder_path = import_folder.to_string_lossy().to_string();
+    let folder_id = ensure_folder_in_db(pool.inner(), &import_folder_path, &root_path)
+        .await
+        .map_err(|e| format!("Failed to ensure folder in database: {}", e))?;
+
     // Write description file if provided
     if let Some(desc) = description {
         if !desc.trim().is_empty() {
@@ -1242,8 +1332,8 @@ pub async fn import_photos(
                     // Insert into database only if not exists
                     // Use file_path for both file_path AND original_path since the photo is now in its final location
                     match sqlx::query(
-                        "INSERT INTO photos (file_path, original_path, file_name, file_size, width, height)
-                         VALUES (?, ?, ?, ?, ?, ?)"
+                        "INSERT INTO photos (file_path, original_path, file_name, file_size, width, height, folder_id)
+                         VALUES (?, ?, ?, ?, ?, ?, ?)"
                     )
                     .bind(&file_path)
                     .bind(&file_path) // Use destination path as original_path, not source path
@@ -1251,6 +1341,7 @@ pub async fn import_photos(
                     .bind(file_size)
                     .bind(width)
                     .bind(height)
+                    .bind(folder_id)
                     .execute(pool.inner())
                     .await {
                         Ok(_) => {

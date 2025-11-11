@@ -70,7 +70,11 @@
     "startAdding": "Commencez à ajouter des catégories pour organiser vos objets",
     "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette catégorie",
     "deleteMessage": "Cette action est irréversible. Les objets de cette catégorie ne seront pas supprimés.",
-    "selectCategory": "Sélectionnez une catégorie"
+    "selectCategory": "Sélectionnez une catégorie",
+    "deleteWarningTitle": "Attention : Suppression irréversible",
+    "deleteWarning1": "Le dossier physique dans la galerie sera définitivement supprimé",
+    "deleteWarning2": "Toutes les photos de ce dossier et de ses sous-dossiers seront supprimées",
+    "deleteWarning3": "Cette action ne peut pas être annulée"
   },
   "photos": {
     "title": "Collection de Photos",
@@ -291,6 +295,10 @@
     "chooseDestination": "Choisir la destination",
     "selectDestinationInstructions": "Sélectionnez le dossier de destination et le format du nom de dossier.",
     "destinationFolder": "Dossier de destination",
+    "importFolder": "Dossier d'import",
+    "importFolderDesc": "Les photos seront importées dans le répertoire d'import par défaut",
+    "otherFolder": "Autre",
+    "otherFolderDesc": "Choisir un dossier de destination différent",
     "folderNameFormat": "Format du nom de dossier",
     "automaticFormat": "Format automatique",
     "automaticFormatDesc": "Le dossier sera nommé avec la date et l'heure actuelles",

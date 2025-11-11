@@ -18,7 +18,6 @@ export default function PhotoManager() {
   const [scanning, setScanning] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [showRefreshModal, setShowRefreshModal] = useState(false)
   const [showMoveModal, setShowMoveModal] = useState(false)
   const [deleteInfo, setDeleteInfo] = useState({ folders: 0, photos: 0 })
   const [deletePhysicalFiles, setDeletePhysicalFiles] = useState(true)
@@ -187,44 +186,6 @@ export default function PhotoManager() {
     }
   }
 
-  const handleRefreshClick = () => {
-    setShowRefreshModal(true)
-  }
-
-  const confirmRefresh = async () => {
-    // Get folder path from current folder
-    let folderPath = ''
-    if (currentFolderId !== null) {
-      const currentFolder = folders.find(f => f.id === currentFolderId)
-      if (currentFolder) {
-        folderPath = currentFolder.path
-      }
-    }
-
-    if (!folderPath) {
-      setError(t('photoManager.cannotDetermineDirectory'))
-      return
-    }
-
-    try {
-      setScanning(true)
-      setError(null)
-      const result = await photosAPI.scanDirectory(folderPath)
-      await loadPhotos()
-      setShowRefreshModal(false)
-
-      if (result.errors && result.errors.length > 0) {
-        setError(`${result.imported} ${t('ui.photoAdded')}, ${result.errors.length} ${t('ui.errorEncountered')}`)
-      }
-    } catch (err) {
-      console.error('Error rescanning directory:', err)
-      setError(t('photoManager.rescanError'))
-      setShowRefreshModal(false)
-    } finally {
-      setScanning(false)
-    }
-  }
-
   const handleSelectAll = () => {
     // Get folders and photos in current folder
     const currentFolderChildren = folders.filter(f => f.parent_id === currentFolderId)
@@ -336,16 +297,6 @@ export default function PhotoManager() {
           onChange={(e) => setSearchQuery(e.target.value)}
           className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <button
-          onClick={handleRefreshClick}
-          disabled={scanning}
-          className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors whitespace-nowrap flex items-center gap-2 disabled:bg-gray-400"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          {t('common.refresh')}
-        </button>
         <button
           onClick={handleSyncDatabase}
           disabled={scanning}
@@ -509,18 +460,6 @@ export default function PhotoManager() {
           </div>
         </div>
       </ConfirmModal>
-
-      {/* Refresh Confirmation Modal */}
-      <ConfirmModal
-        isOpen={showRefreshModal}
-        onClose={() => setShowRefreshModal(false)}
-        onConfirm={confirmRefresh}
-        title={t('ui.rescanDirectory')}
-        message={`${t('ui.rescanDirectoryConfirm')}\n\n${t('ui.directory')} ${currentFolderId !== null ? folders.find(f => f.id === currentFolderId)?.path || '/' : '/'}`}
-        confirmText={t('ui.rescan')}
-        cancelText={t('common.cancel')}
-        danger={false}
-      />
 
       {/* Move To Folder Modal */}
       <MoveToFolderModal

@@ -7,6 +7,7 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
   const [currentFolderId, setCurrentFolderId] = useState(null) // null = root
   const [isCreatingFolder, setIsCreatingFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
+  const [pendingNavigationId, setPendingNavigationId] = useState(null) // ID to navigate to after folders reload
 
   // Reset state when modal closes
   useEffect(() => {
@@ -14,6 +15,7 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
       setCurrentFolderId(null)
       setIsCreatingFolder(false)
       setNewFolderName('')
+      setPendingNavigationId(null)
     }
   }, [isOpen])
 
@@ -37,6 +39,21 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
 
     return map
   }, [folders])
+
+  // Navigate to pending folder when it appears in folderMap
+  useEffect(() => {
+    if (pendingNavigationId && folderMap.has(pendingNavigationId)) {
+      console.log('[MoveToFolderModal] Pending folder found in map, navigating to ID:', pendingNavigationId)
+      console.log('[MoveToFolderModal] FolderMap size:', folderMap.size)
+      console.log('[MoveToFolderModal] Folders prop length:', folders.length)
+      setCurrentFolderId(pendingNavigationId)
+      setPendingNavigationId(null)
+    } else if (pendingNavigationId) {
+      console.log('[MoveToFolderModal] Waiting for pending folder ID:', pendingNavigationId)
+      console.log('[MoveToFolderModal] FolderMap size:', folderMap.size)
+      console.log('[MoveToFolderModal] FolderMap has ID?', folderMap.has(pendingNavigationId))
+    }
+  }, [pendingNavigationId, folderMap, folders])
 
   // Get root folders (folders with parent_id = null)
   const rootFolders = useMemo(() => {
@@ -137,25 +154,19 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
       const result = await photosAPI.createFolder(newFolderPath)
       console.log('[MoveToFolderModal] Folder created, result:', result)
 
+      setIsCreatingFolder(false)
+      setNewFolderName('')
+
+      // Set pending navigation - will trigger once folders prop updates and folderMap recalculates
+      console.log('[MoveToFolderModal] Setting pending navigation to folder ID:', result.id)
+      setPendingNavigationId(result.id)
+
       // Notify parent to reload folders
       if (onFolderCreated) {
         console.log('[MoveToFolderModal] Calling onFolderCreated...')
         await onFolderCreated()
         console.log('[MoveToFolderModal] onFolderCreated completed')
       }
-
-      setIsCreatingFolder(false)
-      setNewFolderName('')
-
-      // Navigate to the newly created folder using the ID from the result
-      // We do this in the next event loop cycle to ensure React has finished
-      // updating the folders prop and recalculating the folderMap memo
-      console.log('[MoveToFolderModal] Scheduling navigation to folder ID:', result.id)
-      setTimeout(() => {
-        console.log('[MoveToFolderModal] Executing navigation to folder ID:', result.id)
-        console.log('[MoveToFolderModal] Current folders prop:', folders.length)
-        setCurrentFolderId(result.id)
-      }, 0)
     } catch (err) {
       console.error('Error creating folder:', err)
     }

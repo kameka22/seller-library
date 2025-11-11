@@ -70,7 +70,11 @@
     "startAdding": "Start adding categories to organize your objects",
     "deleteConfirm": "Are you sure you want to delete this category",
     "deleteMessage": "This action is irreversible. Objects in this category will not be deleted.",
-    "selectCategory": "Select a category"
+    "selectCategory": "Select a category",
+    "deleteWarningTitle": "Warning: Irreversible deletion",
+    "deleteWarning1": "The physical folder in the gallery will be permanently deleted",
+    "deleteWarning2": "All photos in this folder and its subfolders will be deleted",
+    "deleteWarning3": "This action cannot be undone"
   },
   "photos": {
     "title": "Photo Collection",

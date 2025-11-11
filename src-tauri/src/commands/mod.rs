@@ -1540,6 +1540,7 @@ pub async fn import_photos(
 #[derive(Deserialize)]
 pub struct MoveItemsRequest {
     pub photo_ids: Vec<i64>,
+    pub text_file_ids: Vec<i64>,
     pub folder_paths: Vec<String>,
     pub destination_path: String,
 }
@@ -1642,6 +1643,88 @@ pub async fn move_photos_and_folders(
         }
     }
 
+    // Move individual text files
+    for text_file_id in request.text_file_ids {
+        let text_file = sqlx::query_as::<_, TextFile>("SELECT * FROM text_files WHERE id = ?")
+            .bind(text_file_id)
+            .fetch_optional(pool.inner())
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if let Some(text_file) = text_file {
+            let source_path = Path::new(&text_file.file_path);
+
+            if !source_path.exists() {
+                errors.push(format!("Source file not found: {}", text_file.file_path));
+                continue;
+            }
+
+            let file_name = source_path.file_name().unwrap().to_string_lossy().to_string();
+            let mut dest_file = dest_path.join(&file_name);
+
+            // Handle duplicates
+            let mut copy_number = 1;
+            while dest_file.exists() {
+                let stem = source_path.file_stem().ok_or("Invalid file name").map_err(|e| e.to_string())?;
+                let extension = source_path.extension().map(|e| e.to_string_lossy()).unwrap_or_default();
+                let new_name = if extension.is_empty() {
+                    format!("{} ({})", stem.to_string_lossy(), copy_number)
+                } else {
+                    format!("{} ({}).{}", stem.to_string_lossy(), copy_number, extension)
+                };
+                dest_file = dest_path.join(&new_name);
+                copy_number += 1;
+            }
+
+            // Move the file
+            match fs::rename(source_path, &dest_file) {
+                Ok(_) => {
+                    // Update database with new paths and folder_id
+                    let new_file_path = dest_file.to_string_lossy().to_string();
+
+                    // Get the new folder path and ensure it exists in database
+                    let new_folder_path = dest_path.to_string_lossy().to_string();
+
+                    // Get root folder from settings to properly create folder hierarchy
+                    let root_folder: Option<(String,)> = sqlx::query_as("SELECT value FROM settings WHERE key = 'root_folder'")
+                        .fetch_optional(pool.inner())
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                    let root_path = root_folder.map(|(value,)| value).unwrap_or_default();
+
+                    // Ensure destination folder exists in DB and get its ID
+                    match ensure_folder_in_db(pool.inner(), &new_folder_path, &root_path).await {
+                        Ok(new_folder_id) => {
+                            // Update text file size
+                            let metadata = fs::metadata(&new_file_path)
+                                .map_err(|e| format!("Failed to get file metadata: {}", e))?;
+                            let file_size = metadata.len() as i64;
+
+                            // Update text file with new path and folder_id
+                            match sqlx::query(
+                                "UPDATE text_files SET file_path = ?, folder_id = ?, file_size = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+                            )
+                            .bind(&new_file_path)
+                            .bind(new_folder_id)
+                            .bind(file_size)
+                            .bind(text_file_id)
+                            .execute(pool.inner())
+                            .await {
+                                Ok(_) => moved_count += 1,
+                                Err(e) => errors.push(format!("Failed to update database for text file {}: {}", text_file_id, e)),
+                            }
+                        }
+                        Err(e) => errors.push(format!("Failed to ensure destination folder for text file {}: {}", text_file_id, e)),
+                    }
+                }
+                Err(e) => errors.push(format!("Failed to move file {}: {}", text_file.file_path, e)),
+            }
+        } else {
+            errors.push(format!("Text file {} not found", text_file_id));
+        }
+    }
+
     // Move folders
     for folder_path in request.folder_paths {
         let source_folder = Path::new(&folder_path);
@@ -1709,6 +1792,51 @@ pub async fn move_photos_and_folders(
                                 }
                             }
                             Err(e) => errors.push(format!("Failed to ensure folder for photo {}: {}", photo.id, e)),
+                        }
+                    }
+                }
+
+                // Get all text files in this folder before moving
+                let text_files_in_folder = sqlx::query_as::<_, TextFile>("SELECT * FROM text_files WHERE file_path LIKE ?")
+                    .bind(format!("{}%", folder_path))
+                    .fetch_all(pool.inner())
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                // Update all text files in this folder with new paths and folder_id
+                for text_file in text_files_in_folder {
+                    let old_path = text_file.file_path.clone();
+                    let new_path = old_path.replace(&folder_path, &dest_folder_str);
+
+                    // Get the new folder path for this text file
+                    let file_path = Path::new(&new_path);
+                    if let Some(parent) = file_path.parent() {
+                        let file_folder_path = parent.to_string_lossy().to_string();
+
+                        // Ensure folder exists and get its ID
+                        match ensure_folder_in_db(pool.inner(), &file_folder_path, &root_path).await {
+                            Ok(new_folder_id) => {
+                                // Update text file size
+                                let file_size = if let Ok(metadata) = fs::metadata(&new_path) {
+                                    Some(metadata.len() as i64)
+                                } else {
+                                    text_file.file_size
+                                };
+
+                                match sqlx::query(
+                                    "UPDATE text_files SET file_path = ?, folder_id = ?, file_size = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+                                )
+                                .bind(&new_path)
+                                .bind(new_folder_id)
+                                .bind(file_size)
+                                .bind(text_file.id)
+                                .execute(pool.inner())
+                                .await {
+                                    Ok(_) => moved_count += 1,
+                                    Err(e) => errors.push(format!("Failed to update database for text file in folder: {}", e)),
+                                }
+                            }
+                            Err(e) => errors.push(format!("Failed to ensure folder for text file {}: {}", text_file.id, e)),
                         }
                     }
                 }
@@ -1854,6 +1982,89 @@ pub async fn copy_photos_and_folders(
             }
         } else {
             errors.push(format!("Photo {} not found", photo_id));
+        }
+    }
+
+    // Copy individual text files
+    for text_file_id in request.text_file_ids {
+        let text_file = sqlx::query_as::<_, TextFile>("SELECT * FROM text_files WHERE id = ?")
+            .bind(text_file_id)
+            .fetch_optional(pool.inner())
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if let Some(text_file) = text_file {
+            let source_path = Path::new(&text_file.file_path);
+
+            if !source_path.exists() {
+                errors.push(format!("Source file not found: {}", text_file.file_path));
+                continue;
+            }
+
+            let file_name = source_path.file_name().unwrap().to_string_lossy().to_string();
+            let mut dest_file = dest_path.join(&file_name);
+
+            // Handle duplicates
+            let mut copy_number = 1;
+            while dest_file.exists() {
+                let stem = source_path.file_stem().ok_or("Invalid file name").map_err(|e| e.to_string())?;
+                let extension = source_path.extension().map(|e| e.to_string_lossy()).unwrap_or_default();
+                let new_name = if extension.is_empty() {
+                    format!("{} ({})", stem.to_string_lossy(), copy_number)
+                } else {
+                    format!("{} ({}).{}", stem.to_string_lossy(), copy_number, extension)
+                };
+                dest_file = dest_path.join(&new_name);
+                copy_number += 1;
+            }
+
+            // Copy the file
+            match fs::copy(source_path, &dest_file) {
+                Ok(_) => {
+                    // Create new database entry with new path and folder_id
+                    let new_file_path = dest_file.to_string_lossy().to_string();
+                    let new_folder_path = dest_path.to_string_lossy().to_string();
+
+                    // Get root folder from settings
+                    let root_folder: Option<(String,)> = sqlx::query_as("SELECT value FROM settings WHERE key = 'root_folder'")
+                        .fetch_optional(pool.inner())
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                    let root_path = root_folder.map(|(value,)| value).unwrap_or_default();
+
+                    // Ensure destination folder exists in DB and get its ID
+                    match ensure_folder_in_db(pool.inner(), &new_folder_path, &root_path).await {
+                        Ok(new_folder_id) => {
+                            // Get file size
+                            let file_size = if let Ok(metadata) = fs::metadata(&new_file_path) {
+                                Some(metadata.len() as i64)
+                            } else {
+                                text_file.file_size
+                            };
+
+                            // Insert new text file entry
+                            match sqlx::query(
+                                "INSERT INTO text_files (file_path, file_name, file_size, folder_id)
+                                 VALUES (?, ?, ?, ?)"
+                            )
+                            .bind(&new_file_path)
+                            .bind(dest_file.file_name().unwrap().to_string_lossy().to_string())
+                            .bind(file_size)
+                            .bind(new_folder_id)
+                            .execute(pool.inner())
+                            .await {
+                                Ok(_) => copied_count += 1,
+                                Err(e) => errors.push(format!("Failed to create database entry for copied text file: {}", e)),
+                            }
+                        }
+                        Err(e) => errors.push(format!("Failed to ensure destination folder for text file {}: {}", text_file_id, e)),
+                    }
+                }
+                Err(e) => errors.push(format!("Failed to copy file {}: {}", text_file.file_path, e)),
+            }
+        } else {
+            errors.push(format!("Text file {} not found", text_file_id));
         }
     }
 

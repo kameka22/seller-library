@@ -526,6 +526,36 @@ export default function PhotoManager() {
 
   return (
     <div className="space-y-4">
+      {/* Error/Success Message */}
+      {error && (
+        <div className={`p-4 rounded-lg ${error.includes('Erreur') || error.includes('Error') ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}`}>
+          <div className="flex items-start gap-3">
+            {error.includes('Erreur') || error.includes('Error') ? (
+              <svg className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+            <div className="flex-1">
+              <p className={`text-sm ${error.includes('Erreur') || error.includes('Error') ? 'text-red-800' : 'text-green-800'}`}>
+                {error}
+              </p>
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className={`flex-shrink-0 ${error.includes('Erreur') || error.includes('Error') ? 'text-red-400 hover:text-red-600' : 'text-green-400 hover:text-green-600'}`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header Actions */}
       <div className="flex items-center justify-between">
         <input
@@ -783,7 +813,8 @@ export default function PhotoManager() {
             .map(id => textFiles.find(tf => tf.id === parseInt(id.replace('textfile-', ''))))
             .filter(Boolean)
         }
-        currentFolderName={currentFolderInfo?.name || ''}
+        currentFolder={currentFolderInfo}
+        allFolders={folders}
         categories={categories}
       />
 

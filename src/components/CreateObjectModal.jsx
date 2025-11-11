@@ -8,7 +8,8 @@ export default function CreateObjectModal({
   onConfirm,
   selectedPhotos = [],
   selectedTextFiles = [],
-  currentFolderName = '',
+  currentFolder = null,
+  allFolders = [],
   categories = []
 }) {
   const { t } = useLanguage()
@@ -21,47 +22,100 @@ export default function CreateObjectModal({
   })
   const [loading, setLoading] = useState(false)
   const [loadingDescription, setLoadingDescription] = useState(false)
+  const [autoDetectedCategory, setAutoDetectedCategory] = useState(null)
 
   // Reset and pre-fill form when modal opens
   useEffect(() => {
+    // Helper function to find category name from folder path
+    // Walk up the folder tree to find the folder that is a child of "categories"
+    const findCategoryNameFromPath = () => {
+      if (!currentFolder || !allFolders || allFolders.length === 0) return null
+
+      // Find the folder that is a direct child of "categories"
+      let checkFolder = currentFolder
+
+      while (checkFolder) {
+        // Find the parent folder
+        const parentFolder = allFolders.find(f => f.id === checkFolder.parent_id)
+
+        if (!parentFolder) break
+
+        // If parent is "categories" (at root level with that name), we found it
+        if (parentFolder.parent_id === null && parentFolder.name.toLowerCase() === 'categories') {
+          return checkFolder.name
+        }
+
+        // Go up one level
+        checkFolder = parentFolder
+      }
+
+      return null
+    }
+
+    // Helper function to find category ID from category name
+    const findCategoryId = (categoryName) => {
+      if (!categoryName || !categories || categories.length === 0) return ''
+
+      const matchedCategory = categories.find(
+        cat => cat.name.toLowerCase() === categoryName.toLowerCase()
+      )
+
+      return matchedCategory ? String(matchedCategory.id) : ''
+    }
+
     const loadTextFileContent = async () => {
       if (isOpen && selectedTextFiles.length > 0) {
         setLoadingDescription(true)
         try {
           const content = await textFilesAPI.getContent(selectedTextFiles[0].id)
+          const categoryName = findCategoryNameFromPath()
+          const categoryId = findCategoryId(categoryName)
+
+          setAutoDetectedCategory(categoryName)
+
           setFormData(prev => ({
             ...prev,
-            name: currentFolderName || '',
+            name: currentFolder?.name || '',
             description: content || '',
             year: '',
             weight: '',
-            category_id: '',
+            category_id: categoryId,
           }))
         } catch (err) {
           console.error('Error loading text file content:', err)
+          const categoryName = findCategoryNameFromPath()
+          const categoryId = findCategoryId(categoryName)
+
+          setAutoDetectedCategory(categoryName)
+
           setFormData({
-            name: currentFolderName || '',
+            name: currentFolder?.name || '',
             description: '',
             year: '',
             weight: '',
-            category_id: '',
+            category_id: categoryId,
           })
         } finally {
           setLoadingDescription(false)
         }
       } else if (isOpen) {
+        const categoryName = findCategoryNameFromPath()
+        const categoryId = findCategoryId(categoryName)
+
+        setAutoDetectedCategory(categoryName)
+
         setFormData({
-          name: currentFolderName || '',
+          name: currentFolder?.name || '',
           description: '',
           year: '',
           weight: '',
-          category_id: '',
+          category_id: categoryId,
         })
       }
     }
 
     loadTextFileContent()
-  }, [isOpen, currentFolderName, selectedTextFiles])
+  }, [isOpen, currentFolder, allFolders, categories, selectedTextFiles])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -201,6 +255,11 @@ export default function CreateObjectModal({
                     </svg>
                   </div>
                 </div>
+                {autoDetectedCategory && formData.category_id && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Catégorie détectée automatiquement depuis le dossier "{autoDetectedCategory}"
+                  </p>
+                )}
               </div>
             )}
 

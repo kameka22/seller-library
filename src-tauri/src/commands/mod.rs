@@ -292,9 +292,28 @@ pub async fn delete_folder_recursive(
         return Err("Folder does not exist".to_string());
     }
 
-    // Get all photos in this folder and its subfolders
-    let photos = sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE file_path LIKE ?")
-        .bind(format!("{}%", request.folder_path))
+    // Get the folder from database
+    let folder = sqlx::query_as::<_, Folder>("SELECT * FROM folders WHERE path = ?")
+        .bind(&request.folder_path)
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let folder = folder.ok_or_else(|| "Folder not found in database".to_string())?;
+
+    // Get all photos in this folder and its subfolders using recursive CTE
+    // This ensures we only delete photos that belong to this folder tree
+    let photos = sqlx::query_as::<_, Photo>(
+        "WITH RECURSIVE folder_tree AS (
+            SELECT id FROM folders WHERE id = ?
+            UNION ALL
+            SELECT f.id FROM folders f
+            INNER JOIN folder_tree ft ON f.parent_id = ft.id
+        )
+        SELECT p.* FROM photos p
+        WHERE p.folder_id IN (SELECT id FROM folder_tree)"
+    )
+        .bind(folder.id)
         .fetch_all(pool.inner())
         .await
         .map_err(|e| e.to_string())?;
@@ -319,10 +338,18 @@ pub async fn delete_folder_recursive(
         errors.push(format!("Failed to delete folder: {}", e));
     }
 
-    // Now clean up folders from DB that no longer exist on filesystem
-    // This is the same approach as sync_database
-    let all_folders = sqlx::query_as::<_, Folder>("SELECT * FROM folders WHERE path LIKE ?")
-        .bind(format!("{}%", request.folder_path))
+    // Get all folders in the tree (including the main folder and its descendants)
+    let all_folders = sqlx::query_as::<_, Folder>(
+        "WITH RECURSIVE folder_tree AS (
+            SELECT id, path FROM folders WHERE id = ?
+            UNION ALL
+            SELECT f.id, f.path FROM folders f
+            INNER JOIN folder_tree ft ON f.parent_id = ft.id
+        )
+        SELECT f.* FROM folders f
+        WHERE f.id IN (SELECT id FROM folder_tree)"
+    )
+        .bind(folder.id)
         .fetch_all(pool.inner())
         .await
         .map_err(|e| e.to_string())?;
@@ -356,9 +383,28 @@ pub async fn delete_folder_recursive_db_only(
     pool: State<'_, SqlitePool>,
     request: DeleteFolderRequest,
 ) -> Result<serde_json::Value, String> {
-    // Get all photos in this folder and its subfolders
-    let photos = sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE file_path LIKE ?")
-        .bind(format!("{}%", request.folder_path))
+    // Get the folder from database
+    let folder = sqlx::query_as::<_, Folder>("SELECT * FROM folders WHERE path = ?")
+        .bind(&request.folder_path)
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let folder = folder.ok_or_else(|| "Folder not found in database".to_string())?;
+
+    // Get all photos in this folder and its subfolders using recursive CTE
+    // This ensures we only delete photos that belong to this folder tree
+    let photos = sqlx::query_as::<_, Photo>(
+        "WITH RECURSIVE folder_tree AS (
+            SELECT id FROM folders WHERE id = ?
+            UNION ALL
+            SELECT f.id FROM folders f
+            INNER JOIN folder_tree ft ON f.parent_id = ft.id
+        )
+        SELECT p.* FROM photos p
+        WHERE p.folder_id IN (SELECT id FROM folder_tree)"
+    )
+        .bind(folder.id)
         .fetch_all(pool.inner())
         .await
         .map_err(|e| e.to_string())?;
@@ -378,9 +424,18 @@ pub async fn delete_folder_recursive_db_only(
         }
     }
 
-    // Clean up folders from DB - get all matching folders and check if they exist
-    let all_folders = sqlx::query_as::<_, Folder>("SELECT * FROM folders WHERE path LIKE ?")
-        .bind(format!("{}%", request.folder_path))
+    // Get all folders in the tree (including the main folder and its descendants)
+    let all_folders = sqlx::query_as::<_, Folder>(
+        "WITH RECURSIVE folder_tree AS (
+            SELECT id, path FROM folders WHERE id = ?
+            UNION ALL
+            SELECT f.id, f.path FROM folders f
+            INNER JOIN folder_tree ft ON f.parent_id = ft.id
+        )
+        SELECT f.* FROM folders f
+        WHERE f.id IN (SELECT id FROM folder_tree)"
+    )
+        .bind(folder.id)
         .fetch_all(pool.inner())
         .await
         .map_err(|e| e.to_string())?;

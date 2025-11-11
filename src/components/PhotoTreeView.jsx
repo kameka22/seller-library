@@ -256,20 +256,6 @@ export default function PhotoTreeView({
             </div>
           ))}
         </div>
-
-        {/* Select all / Deselect all button */}
-        {(currentFolder.children.length > 0 || currentFolder.photos.length > 0) && onSelectAll && (
-          <button
-            onClick={onSelectAll}
-            className={`px-3 py-1 text-white text-xs rounded transition-colors whitespace-nowrap ${
-              areAllSelected()
-                ? 'bg-orange-600 hover:bg-orange-700'
-                : 'bg-blue-600 hover:bg-blue-700'
-            }`}
-          >
-            {areAllSelected() ? t('ui.deselectAll') : t('ui.selectAll')}
-          </button>
-        )}
       </div>
 
       {/* Folders list */}

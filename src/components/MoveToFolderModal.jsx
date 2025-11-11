@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { photosAPI } from '../utils/api'
 
-export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, folders = [], selectedItems, onFolderCreated }) {
+export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, folders = [], selectedItems, onFolderCreated, rootFolder }) {
   const { t } = useLanguage()
   const [currentFolderId, setCurrentFolderId] = useState(null) // null = root
   const [isCreatingFolder, setIsCreatingFolder] = useState(false)
@@ -120,8 +120,16 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
 
     try {
       // Build the full path for the new folder
-      const parentPath = currentFolder.path === '/' ? '' : currentFolder.path
-      const newFolderPath = `${parentPath}/${newFolderName.trim()}`
+      let parentPath
+      if (currentFolderId === null) {
+        // At root, use rootFolder path
+        parentPath = rootFolder || ''
+      } else {
+        // In a subfolder, use currentFolder path
+        parentPath = currentFolder.path
+      }
+
+      const newFolderPath = parentPath ? `${parentPath}/${newFolderName.trim()}` : `/${newFolderName.trim()}`
 
       await photosAPI.createFolder(newFolderPath)
 
@@ -215,8 +223,9 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
             <button
               onClick={() => setCurrentFolderId(null)}
               className="text-blue-600 hover:text-blue-700 hover:underline"
+              title={rootFolder || ''}
             >
-              {t('ui.root')}
+              Racine
             </button>
             {breadcrumb.map((folder) => (
               <div key={folder.id} className="flex items-center gap-2">

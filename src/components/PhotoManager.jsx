@@ -481,6 +481,7 @@ export default function PhotoManager() {
         folders={folders}
         selectedItems={selectedItems}
         onFolderCreated={loadPhotos}
+        rootFolder={rootFolder}
       />
     </div>
   )

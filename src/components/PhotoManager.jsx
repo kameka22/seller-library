@@ -193,8 +193,10 @@ export default function PhotoManager() {
     // Get filtered folders and photos in current folder
     // filteredFolders and filteredPhotos already contain only current folder items matching search
 
-    // Collect all IDs from current folder
-    const allFolderIds = filteredFolders.map(f => `folder-${f.path}`)
+    // Collect all IDs from current folder, excluding level 1 folders (parent_id === null)
+    const allFolderIds = filteredFolders
+      .filter(f => f.parent_id !== null) // Only level 2+ folders can be selected
+      .map(f => `folder-${f.path}`)
     const allPhotoIds = filteredPhotos.map(p => `photo-${p.id}`)
     const allIds = [...allFolderIds, ...allPhotoIds]
 
@@ -356,8 +358,9 @@ export default function PhotoManager() {
             >
               {(() => {
                 // filteredFolders and filteredPhotos already contain only current folder items matching search
+                // Exclude level 1 folders (parent_id === null) from selection
                 const allIds = [
-                  ...filteredFolders.map(f => `folder-${f.path}`),
+                  ...filteredFolders.filter(f => f.parent_id !== null).map(f => `folder-${f.path}`),
                   ...filteredPhotos.map(p => `photo-${p.id}`)
                 ]
                 const areAllSelected = allIds.length > 0 && allIds.every(id => selectedItems.includes(id))

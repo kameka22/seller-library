@@ -138,7 +138,10 @@ export default function PhotoTreeView({
 
   // Check if all elements in current folder are selected
   const areAllSelected = () => {
-    const folderIds = currentFolder.children.map(f => `folder-${f.path}`)
+    // Exclude level 1 folders (parent_id === null) from selection
+    const folderIds = currentFolder.children
+      .filter(f => f.parent_id !== null)
+      .map(f => `folder-${f.path}`)
     const photoIds = currentFolder.photos.map(p => `photo-${p.id}`)
     const allIds = [...folderIds, ...photoIds]
 
@@ -285,6 +288,8 @@ export default function PhotoTreeView({
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {currentFolder.children.map((folder) => {
               const selected = isFolderSelected(folder)
+              // Level 1 folders (parent_id === null) cannot be selected or have context menu
+              const isLevel1 = folder.parent_id === null
 
               return (
                 <div
@@ -292,18 +297,24 @@ export default function PhotoTreeView({
                   className={`relative group bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors border-2 ${
                     selected ? 'border-blue-500 bg-blue-50' : 'border-transparent'
                   }`}
-                  onContextMenu={(e) => handleFolderContextMenu(e, folder)}
+                  onContextMenu={(e) => {
+                    if (!isLevel1) {
+                      handleFolderContextMenu(e, folder)
+                    }
+                  }}
                 >
-                  {/* Selection checkbox */}
-                  <div className="absolute top-2 left-2 z-10">
-                    <input
-                      type="checkbox"
-                      checked={selected}
-                      onChange={() => handleFolderSelect(folder)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-5 h-5 rounded cursor-pointer"
-                    />
-                  </div>
+                  {/* Selection checkbox - only for level 2+ folders */}
+                  {!isLevel1 && (
+                    <div className="absolute top-2 left-2 z-10">
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() => handleFolderSelect(folder)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-5 h-5 rounded cursor-pointer"
+                      />
+                    </div>
+                  )}
 
                   {/* Folder icon and name */}
                   <div

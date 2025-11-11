@@ -16,6 +16,7 @@ export default function PhotoManager() {
   const [folders, setFolders] = useState([]) // Real-time folder structure from file system
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [successMessage, setSuccessMessage] = useState(null)
   const [selectedPhoto, setSelectedPhoto] = useState(null)
   const [editingPhoto, setEditingPhoto] = useState(null)
   const [editingTextFile, setEditingTextFile] = useState(null)
@@ -338,9 +339,13 @@ export default function PhotoManager() {
       // Clear selection
       setSelectedItems([])
 
-      // Show success message if there were errors
+      // Show appropriate message
       if (result.errors && result.errors.length > 0) {
+        // Partial success with errors
         setError(`${t('ui.moveSuccess')} - ${result.moved} ${t('ui.items')}. ${result.errors.length} ${t('ui.errorEncountered')}`)
+      } else {
+        // Complete success
+        setSuccessMessage(`${t('ui.moveSuccess')} - ${result.moved} ${t('ui.items')}`)
       }
     } catch (err) {
       console.error('Error moving items:', err)
@@ -387,12 +392,12 @@ export default function PhotoManager() {
       // Clear selection
       setSelectedItems([])
 
-      // Reload photos to update associations (this will clear error state)
+      // Reload photos to update associations
       await loadPhotos()
 
-      // Show success message AFTER loading photos (so it doesn't get cleared)
+      // Show success message AFTER loading photos
       const message = `${t('objects.createObjectSuccess')} - ${t('objects.viewObject')}: ${createdObject.name}`
-      setError(message)
+      setSuccessMessage(message)
     } catch (err) {
       console.error('Error creating object:', err)
       setError(t('errors.creatingObject') + ': ' + (err.message || err))
@@ -438,9 +443,13 @@ export default function PhotoManager() {
       // Clear selection
       setSelectedItems([])
 
-      // Show success message if there were errors
+      // Show appropriate message
       if (result.errors && result.errors.length > 0) {
+        // Partial success with errors
         setError(`${t('ui.copySuccess')} - ${result.copied} ${t('ui.items')}. ${result.errors.length} ${t('ui.errorEncountered')}`)
+      } else {
+        // Complete success
+        setSuccessMessage(`${t('ui.copySuccess')} - ${result.copied} ${t('ui.items')}`)
       }
     } catch (err) {
       console.error('Error copying items:', err)
@@ -526,27 +535,41 @@ export default function PhotoManager() {
 
   return (
     <div className="space-y-4">
-      {/* Error/Success Message */}
-      {error && (
-        <div className={`p-4 rounded-lg ${error.includes('Erreur') || error.includes('Error') ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}`}>
+      {/* Success Message */}
+      {successMessage && (
+        <div className="p-4 rounded-lg bg-green-50 border border-green-200">
           <div className="flex items-start gap-3">
-            {error.includes('Erreur') || error.includes('Error') ? (
-              <svg className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            )}
+            <svg className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
             <div className="flex-1">
-              <p className={`text-sm ${error.includes('Erreur') || error.includes('Error') ? 'text-red-800' : 'text-green-800'}`}>
-                {error}
-              </p>
+              <p className="text-sm text-green-800">{successMessage}</p>
+            </div>
+            <button
+              onClick={() => setSuccessMessage(null)}
+              className="flex-shrink-0 text-green-400 hover:text-green-600"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <div className="p-4 rounded-lg bg-red-50 border border-red-200">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm text-red-800">{error}</p>
             </div>
             <button
               onClick={() => setError(null)}
-              className={`flex-shrink-0 ${error.includes('Erreur') || error.includes('Error') ? 'text-red-400 hover:text-red-600' : 'text-green-400 hover:text-green-600'}`}
+              className="flex-shrink-0 text-red-400 hover:text-red-600"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

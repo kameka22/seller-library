@@ -174,9 +174,11 @@ export default function PhotoManager() {
 
       await loadPhotos()
       setSelectedItems([])
+      setShowDeleteModal(false)
     } catch (err) {
       console.error('Error deleting items:', err)
       setError(t('photoManager.deletingError'))
+      setShowDeleteModal(false)
     }
   }
 
@@ -204,6 +206,7 @@ export default function PhotoManager() {
       setError(null)
       const result = await photosAPI.scanDirectory(folderPath)
       await loadPhotos()
+      setShowRefreshModal(false)
 
       if (result.errors && result.errors.length > 0) {
         setError(`${result.imported} ${t('ui.photoAdded')}, ${result.errors.length} ${t('ui.errorEncountered')}`)
@@ -211,6 +214,7 @@ export default function PhotoManager() {
     } catch (err) {
       console.error('Error rescanning directory:', err)
       setError(t('photoManager.rescanError'))
+      setShowRefreshModal(false)
     } finally {
       setScanning(false)
     }

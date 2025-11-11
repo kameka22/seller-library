@@ -8,7 +8,7 @@ export default function WelcomeModal({ onComplete }) {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    language: 'en',
+    language: 'fr',
     rootFolder: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)

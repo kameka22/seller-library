@@ -131,12 +131,15 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
 
       const newFolderPath = parentPath ? `${parentPath}/${newFolderName.trim()}` : `/${newFolderName.trim()}`
 
-      await photosAPI.createFolder(newFolderPath)
+      const result = await photosAPI.createFolder(newFolderPath)
 
       // Notify parent to reload folders
       if (onFolderCreated) {
         await onFolderCreated()
       }
+
+      // Navigate to the newly created folder
+      setCurrentFolderId(result.id)
 
       setIsCreatingFolder(false)
       setNewFolderName('')

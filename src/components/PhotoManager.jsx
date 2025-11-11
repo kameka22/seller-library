@@ -192,11 +192,11 @@ export default function PhotoManager() {
   const handleSelectAll = () => {
     // Get folders and photos in current folder
     const currentFolderChildren = folders.filter(f => f.parent_id === currentFolderId)
-    const currentFolderPhotos = filteredPhotos.filter(p => p.folder_id === currentFolderId)
+    // filteredPhotos already contains only current folder photos
 
     // Collect all IDs from current folder
     const allFolderIds = currentFolderChildren.map(f => `folder-${f.path}`)
-    const allPhotoIds = currentFolderPhotos.map(p => `photo-${p.id}`)
+    const allPhotoIds = filteredPhotos.map(p => `photo-${p.id}`)
     const allIds = [...allFolderIds, ...allPhotoIds]
 
     // Check if all are already selected
@@ -282,7 +282,9 @@ export default function PhotoManager() {
     }
   }
 
-  const filteredPhotos = photos.filter(photo =>
+  // First filter by current folder (visual level), then apply search query
+  const currentFolderPhotos = photos.filter(p => p.folder_id === currentFolderId)
+  const filteredPhotos = currentFolderPhotos.filter(photo =>
     photo.file_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (photo.original_path && photo.original_path.toLowerCase().includes(searchQuery.toLowerCase()))
   )
@@ -348,10 +350,10 @@ export default function PhotoManager() {
             >
               {(() => {
                 const currentFolderChildren = folders.filter(f => f.parent_id === currentFolderId)
-                const currentFolderPhotos = filteredPhotos.filter(p => p.folder_id === currentFolderId)
+                // filteredPhotos already contains only current folder photos
                 const allIds = [
                   ...currentFolderChildren.map(f => `folder-${f.path}`),
-                  ...currentFolderPhotos.map(p => `photo-${p.id}`)
+                  ...filteredPhotos.map(p => `photo-${p.id}`)
                 ]
                 const areAllSelected = allIds.length > 0 && allIds.every(id => selectedItems.includes(id))
                 return areAllSelected ? t('ui.deselectAll') : t('ui.selectAll')

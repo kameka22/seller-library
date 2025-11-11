@@ -1436,12 +1436,31 @@ pub async fn create_folder(
         .unwrap_or("")
         .to_string();
 
-    // Insert into database
+    // Determine parent_id by looking up parent folder in DB
+    let parent_id: Option<i64> = if let Some(parent) = folder_path.parent() {
+        let parent_path = parent.to_string_lossy().to_string();
+
+        // Check if parent exists in folders table
+        let parent_folder: Option<(i64,)> = sqlx::query_as(
+            "SELECT id FROM folders WHERE path = ?"
+        )
+        .bind(&parent_path)
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+        parent_folder.map(|(id,)| id)
+    } else {
+        None
+    };
+
+    // Insert into database with correct parent_id
     let result = sqlx::query(
-        "INSERT INTO folders (path, name, parent_id) VALUES (?, ?, NULL)"
+        "INSERT INTO folders (path, name, parent_id) VALUES (?, ?, ?)"
     )
     .bind(&request.folder_path)
     .bind(&folder_name)
+    .bind(parent_id)
     .execute(pool.inner())
     .await
     .map_err(|e| e.to_string())?;

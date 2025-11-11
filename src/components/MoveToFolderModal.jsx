@@ -172,9 +172,13 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
         console.log('[MoveToFolderModal] onFolderCreated completed')
       }
 
-      // THEN set pending navigation - this ensures the state update happens after folders reload
-      console.log('[MoveToFolderModal] Setting pending navigation to folder ID:', result.id)
-      setPendingNavigationId(result.id)
+      // Force React to finish the current render cycle before setting pending navigation
+      // This ensures the folders prop has been updated and folderMap has been recalculated
+      console.log('[MoveToFolderModal] Scheduling pending navigation to folder ID:', result.id)
+      setTimeout(() => {
+        console.log('[MoveToFolderModal] Setting pending navigation to folder ID:', result.id)
+        setPendingNavigationId(result.id)
+      }, 0)
     } catch (err) {
       console.error('Error creating folder:', err)
     }

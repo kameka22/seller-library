@@ -172,9 +172,14 @@ export default function PhotoManager() {
         }
       }
 
-      await loadPhotos()
-      setSelectedItems([])
+      // Close modal first
       setShowDeleteModal(false)
+
+      // Reload photos
+      await loadPhotos()
+
+      // Clear selection
+      setSelectedItems([])
     } catch (err) {
       console.error('Error deleting items:', err)
       setError(t('photoManager.deletingError'))

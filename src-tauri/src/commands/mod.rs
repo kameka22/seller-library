@@ -319,6 +319,16 @@ pub async fn delete_folder_recursive(
         errors.push(format!("Failed to delete folder: {}", e));
     }
 
+    // Delete the folder and all its subfolders from the folders table
+    match sqlx::query("DELETE FROM folders WHERE path LIKE ?")
+        .bind(format!("{}%", request.folder_path))
+        .execute(pool.inner())
+        .await
+    {
+        Ok(_) => {},
+        Err(e) => errors.push(format!("Failed to delete folder from DB: {}", e)),
+    }
+
     Ok(serde_json::json!({
         "deleted": deleted_count,
         "errors": errors
@@ -350,6 +360,16 @@ pub async fn delete_folder_recursive_db_only(
             Ok(_) => deleted_count += 1,
             Err(e) => errors.push(format!("DB error for {}: {}", photo.file_name, e)),
         }
+    }
+
+    // Delete the folder and all its subfolders from the folders table
+    match sqlx::query("DELETE FROM folders WHERE path LIKE ?")
+        .bind(format!("{}%", request.folder_path))
+        .execute(pool.inner())
+        .await
+    {
+        Ok(_) => {},
+        Err(e) => errors.push(format!("Failed to delete folder from DB: {}", e)),
     }
 
     Ok(serde_json::json!({

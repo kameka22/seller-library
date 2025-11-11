@@ -391,6 +391,7 @@ export default function PhotoManager() {
           onMoveItems={handleMoveItems}
           rootFolder={rootFolder}
           allFolders={folders}
+          allPhotos={photos}
         />
       </div>
 

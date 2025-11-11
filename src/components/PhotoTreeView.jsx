@@ -20,7 +20,8 @@ export default function PhotoTreeView({
   onDeleteItems,
   onMoveItems,
   rootFolder = null,       // Root folder path to display real name
-  allFolders = []          // All folders for navigation and counts
+  allFolders = [],         // All folders for navigation and counts
+  allPhotos = []           // All photos for counting (not filtered)
 }) {
   const { t } = useLanguage()
 
@@ -56,11 +57,13 @@ export default function PhotoTreeView({
     })
 
     // Count photos in each folder (including subfolders)
+    // Use allPhotos for accurate counts, not filtered photos
+    const photosToCount = allPhotos.length > 0 ? allPhotos : photos
     const countPhotos = (folderId) => {
       const folder = map.get(folderId)
       if (!folder) return 0
 
-      let count = photos.filter(p => p.folder_id === folderId).length
+      let count = photosToCount.filter(p => p.folder_id === folderId).length
       folder.children.forEach(childId => {
         count += countPhotos(childId)
       })
@@ -71,7 +74,7 @@ export default function PhotoTreeView({
     foldersToUse.forEach(folder => countPhotos(folder.id))
 
     return map
-  }, [allFolders, folders, photos])
+  }, [allFolders, folders, photos, allPhotos])
 
   // Get root folders (folders with parent_id = null) - use filtered folders for display
   const rootFolders = useMemo(() => {
@@ -230,8 +233,9 @@ export default function PhotoTreeView({
   }
 
   // Only show "no photos in collection" message when at root and truly empty
-  // Use allFolders to check if collection is really empty, not just current folder
-  const isCollectionEmpty = (allFolders.length > 0 ? allFolders : folders).length === 0 && photos.length === 0
+  // Use allFolders and allPhotos to check if collection is really empty, not just current folder
+  const photosToCheck = allPhotos.length > 0 ? allPhotos : photos
+  const isCollectionEmpty = (allFolders.length > 0 ? allFolders : folders).length === 0 && photosToCheck.length === 0
   const isAtRoot = currentFolderId === null
 
   if (isCollectionEmpty && isAtRoot) {

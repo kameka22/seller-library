@@ -1703,7 +1703,12 @@ pub async fn get_all_settings(pool: State<'_, SqlitePool>) -> Result<SettingsMap
     Ok(SettingsMap { settings })
 }
 
-// Specialized command for root_folder (needs to trigger folder scanning)
+// Specialized commands for root_folder
+#[tauri::command]
+pub async fn get_root_folder(pool: State<'_, SqlitePool>) -> Result<Option<String>, String> {
+    get_setting(pool, "root_folder".to_string()).await
+}
+
 #[tauri::command]
 pub async fn set_root_folder(pool: State<'_, SqlitePool>, path: String) -> Result<(), String> {
     sqlx::query(

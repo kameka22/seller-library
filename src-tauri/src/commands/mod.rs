@@ -1513,6 +1513,23 @@ pub async fn sync_database(pool: State<'_, SqlitePool>) -> Result<SyncDatabaseRe
             Ok(_) => {},
             Err(e) => errors.push(format!("Failed to rebuild folder hierarchy: {}", e)),
         }
+
+        // Scan for new photos in the root folder
+        let root_path_obj = Path::new(&root_path);
+        if root_path_obj.exists() && root_path_obj.is_dir() {
+            let mut imported_count = 0;
+            let mut scan_errors = Vec::new();
+
+            match scan_directory_recursive(pool.inner(), root_path_obj, root_path_obj, &mut imported_count, &mut scan_errors).await {
+                Ok(_) => {
+                    photos_updated += imported_count;
+                    if !scan_errors.is_empty() {
+                        errors.extend(scan_errors);
+                    }
+                },
+                Err(e) => errors.push(format!("Failed to scan for new photos: {}", e)),
+            }
+        }
     }
 
     // Clean up empty folders (folders with no photos)

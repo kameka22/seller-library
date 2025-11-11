@@ -1477,12 +1477,12 @@ async fn scan_and_create_folders(pool: &SqlitePool, root_path: &str) -> Result<i
     let mut folders_created = 0;
 
     // Recursively scan all directories
-    fn scan_dir_recursive(
-        dir: &Path,
-        root_path: &str,
-        pool: &SqlitePool,
-        count: &mut i32,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send + '_>> {
+    fn scan_dir_recursive<'a>(
+        dir: &'a Path,
+        root_path: &'a str,
+        pool: &'a SqlitePool,
+        count: &'a mut i32,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send + 'a>> {
         Box::pin(async move {
             let entries = match std::fs::read_dir(dir) {
                 Ok(entries) => entries,

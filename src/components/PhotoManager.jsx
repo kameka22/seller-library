@@ -52,6 +52,9 @@ export default function PhotoManager() {
         photosAPI.listFolders()
       ])
 
+      console.log('[PhotoManager] Loaded folders:', foldersData?.length)
+      console.log('[PhotoManager] Folder paths:', foldersData?.map(f => f.path))
+
       setPhotos(photosData)
       setFolders(foldersData || [])
       setError(null)

@@ -7,7 +7,6 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
   const [currentFolderId, setCurrentFolderId] = useState(null) // null = root
   const [isCreatingFolder, setIsCreatingFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
-  const [pendingFolderPath, setPendingFolderPath] = useState(null) // Path of folder to navigate to after creation
 
   // Reset state when modal closes
   useEffect(() => {
@@ -15,20 +14,8 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
       setCurrentFolderId(null)
       setIsCreatingFolder(false)
       setNewFolderName('')
-      setPendingFolderPath(null)
     }
   }, [isOpen])
-
-  // Navigate to newly created folder once it appears in folders list
-  useEffect(() => {
-    if (pendingFolderPath && folders.length > 0) {
-      const newFolder = folders.find(f => f.path === pendingFolderPath)
-      if (newFolder) {
-        setCurrentFolderId(newFolder.id)
-        setPendingFolderPath(null)
-      }
-    }
-  }, [pendingFolderPath, folders])
 
   // Build folder map with parent-child relationships
   const folderMap = useMemo(() => {
@@ -143,16 +130,24 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
       }
 
       const newFolderPath = parentPath ? `${parentPath}/${newFolderName.trim()}` : `/${newFolderName.trim()}`
+      console.log('[MoveToFolderModal] Creating folder with path:', newFolderPath)
+      console.log('[MoveToFolderModal] Parent path:', parentPath)
+      console.log('[MoveToFolderModal] Current folder ID:', currentFolderId)
 
-      await photosAPI.createFolder(newFolderPath)
-
-      // Store the path to navigate to after reload
-      setPendingFolderPath(newFolderPath)
+      const result = await photosAPI.createFolder(newFolderPath)
+      console.log('[MoveToFolderModal] Folder created, result:', result)
 
       // Notify parent to reload folders
       if (onFolderCreated) {
+        console.log('[MoveToFolderModal] Calling onFolderCreated...')
         await onFolderCreated()
+        console.log('[MoveToFolderModal] onFolderCreated completed')
       }
+
+      // Navigate to the newly created folder using the ID from the result
+      // We do this AFTER onFolderCreated completes to ensure data is reloaded
+      console.log('[MoveToFolderModal] Navigating to folder ID:', result.id)
+      setCurrentFolderId(result.id)
 
       setIsCreatingFolder(false)
       setNewFolderName('')

@@ -1247,18 +1247,38 @@ pub async fn move_photos_and_folders(
             // Move the file
             match fs::rename(source_path, &dest_file) {
                 Ok(_) => {
-                    // Update database with new paths
+                    // Update database with new paths and folder_id
                     let new_file_path = dest_file.to_string_lossy().to_string();
-                    match sqlx::query(
-                        "UPDATE photos SET file_path = ?, original_path = ? WHERE id = ?"
-                    )
-                    .bind(&new_file_path)
-                    .bind(&new_file_path)
-                    .bind(photo_id)
-                    .execute(pool.inner())
-                    .await {
-                        Ok(_) => moved_count += 1,
-                        Err(e) => errors.push(format!("Failed to update database for photo {}: {}", photo_id, e)),
+
+                    // Get the new folder path and ensure it exists in database
+                    let new_folder_path = dest_path.to_string_lossy().to_string();
+
+                    // Get root folder from settings to properly create folder hierarchy
+                    let root_folder: Option<(String,)> = sqlx::query_as("SELECT value FROM settings WHERE key = 'root_folder'")
+                        .fetch_optional(pool.inner())
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                    let root_path = root_folder.map(|(value,)| value).unwrap_or_default();
+
+                    // Ensure destination folder exists in DB and get its ID
+                    match ensure_folder_in_db(pool.inner(), &new_folder_path, &root_path).await {
+                        Ok(new_folder_id) => {
+                            // Update photo with new path and folder_id
+                            match sqlx::query(
+                                "UPDATE photos SET file_path = ?, original_path = ?, folder_id = ? WHERE id = ?"
+                            )
+                            .bind(&new_file_path)
+                            .bind(&new_file_path)
+                            .bind(new_folder_id)
+                            .bind(photo_id)
+                            .execute(pool.inner())
+                            .await {
+                                Ok(_) => moved_count += 1,
+                                Err(e) => errors.push(format!("Failed to update database for photo {}: {}", photo_id, e)),
+                            }
+                        }
+                        Err(e) => errors.push(format!("Failed to ensure destination folder for photo {}: {}", photo_id, e)),
                     }
                 }
                 Err(e) => errors.push(format!("Failed to move file {}: {}", photo.file_path, e)),
@@ -1300,21 +1320,42 @@ pub async fn move_photos_and_folders(
             Ok(_) => {
                 let dest_folder_str = dest_folder.to_string_lossy().to_string();
 
-                // Update all photos in this folder
+                // Get root folder from settings for folder hierarchy
+                let root_folder: Option<(String,)> = sqlx::query_as("SELECT value FROM settings WHERE key = 'root_folder'")
+                    .fetch_optional(pool.inner())
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                let root_path = root_folder.map(|(value,)| value).unwrap_or_default();
+
+                // Update all photos in this folder with new paths and folder_id
                 for photo in photos_in_folder {
                     let old_path = photo.file_path.clone();
                     let new_path = old_path.replace(&folder_path, &dest_folder_str);
 
-                    match sqlx::query(
-                        "UPDATE photos SET file_path = ?, original_path = ? WHERE id = ?"
-                    )
-                    .bind(&new_path)
-                    .bind(&new_path)
-                    .bind(photo.id)
-                    .execute(pool.inner())
-                    .await {
-                        Ok(_) => moved_count += 1,
-                        Err(e) => errors.push(format!("Failed to update database for photo in folder: {}", e)),
+                    // Get the new folder path for this photo
+                    let photo_path = Path::new(&new_path);
+                    if let Some(parent) = photo_path.parent() {
+                        let photo_folder_path = parent.to_string_lossy().to_string();
+
+                        // Ensure folder exists and get its ID
+                        match ensure_folder_in_db(pool.inner(), &photo_folder_path, &root_path).await {
+                            Ok(new_folder_id) => {
+                                match sqlx::query(
+                                    "UPDATE photos SET file_path = ?, original_path = ?, folder_id = ? WHERE id = ?"
+                                )
+                                .bind(&new_path)
+                                .bind(&new_path)
+                                .bind(new_folder_id)
+                                .bind(photo.id)
+                                .execute(pool.inner())
+                                .await {
+                                    Ok(_) => moved_count += 1,
+                                    Err(e) => errors.push(format!("Failed to update database for photo in folder: {}", e)),
+                                }
+                            }
+                            Err(e) => errors.push(format!("Failed to ensure folder for photo {}: {}", photo.id, e)),
+                        }
                     }
                 }
 

@@ -135,7 +135,7 @@ pub async fn scan_photos(
     let mut imported_count = 0;
     let mut errors = vec![];
 
-    scan_directory_recursive(pool.inner(), source_path, &mut imported_count, &mut errors)
+    scan_directory_recursive(pool.inner(), source_path, source_path, &mut imported_count, &mut errors)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -148,6 +148,7 @@ pub async fn scan_photos(
 fn scan_directory_recursive<'a>(
     pool: &'a SqlitePool,
     path: &'a Path,
+    root_path: &'a Path,  // Added root path to limit hierarchy
     count: &'a mut i32,
     errors: &'a mut Vec<String>,
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<()>> + Send + 'a>> {
@@ -158,9 +159,9 @@ fn scan_directory_recursive<'a>(
                 let path = entry.path();
 
                 if path.is_dir() {
-                    scan_directory_recursive(pool, &path, count, errors).await?;
+                    scan_directory_recursive(pool, &path, root_path, count, errors).await?;
                 } else if is_image_file(&path) {
-                    if let Err(e) = import_photo(pool, &path).await {
+                    if let Err(e) = import_photo(pool, &path, root_path).await {
                         errors.push(format!("{}: {}", path.display(), e));
                     } else {
                         *count += 1;
@@ -181,7 +182,7 @@ fn is_image_file(path: &Path) -> bool {
     }
 }
 
-async fn import_photo(pool: &SqlitePool, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+async fn import_photo(pool: &SqlitePool, path: &Path, root_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let file_path = path.to_string_lossy().to_string();
     let file_name = path.file_name()
         .ok_or("Invalid file name")?
@@ -204,8 +205,9 @@ async fn import_photo(pool: &SqlitePool, path: &Path) -> Result<(), Box<dyn std:
         return Err("Could not determine parent folder".into());
     };
 
-    // Ensure folder exists in database
-    let folder_id = ensure_folder_in_db(pool, &folder_path).await
+    // Ensure folder exists in database with proper hierarchy limited to root_path
+    let root_path_str = root_path.to_string_lossy().to_string();
+    let folder_id = ensure_folder_in_db(pool, &folder_path, &root_path_str).await
         .map_err(|e| format!("Failed to ensure folder in DB: {}", e))?;
 
     sqlx::query(
@@ -1360,6 +1362,14 @@ pub async fn sync_database(pool: State<'_, SqlitePool>) -> Result<SyncDatabaseRe
     let mut folders_cleaned = 0;
     let mut errors = Vec::new();
 
+    // Get root folder from settings
+    let root_folder: Option<(String,)> = sqlx::query_as("SELECT value FROM settings WHERE key = 'root_folder'")
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let root_path = root_folder.map(|(value,)| value).unwrap_or_default();
+
     // Get all photos from database
     let photos = sqlx::query_as::<_, Photo>("SELECT * FROM photos")
         .fetch_all(pool.inner())
@@ -1385,7 +1395,9 @@ pub async fn sync_database(pool: State<'_, SqlitePool>) -> Result<SyncDatabaseRe
             if let Some(parent) = photo_path.parent() {
                 let folder_path = parent.to_string_lossy().to_string();
 
-                match ensure_folder_in_db(pool.inner(), &folder_path).await {
+                // Use root_path if available, otherwise use folder_path itself as root
+                let effective_root = if !root_path.is_empty() { &root_path } else { &folder_path };
+                match ensure_folder_in_db(pool.inner(), &folder_path, effective_root).await {
                     Ok(folder_id) => {
                         // Update photo's folder_id if different
                         if photo.folder_id != Some(folder_id) {
@@ -1440,8 +1452,9 @@ pub async fn sync_database(pool: State<'_, SqlitePool>) -> Result<SyncDatabaseRe
     })
 }
 
-// Helper function to ensure a folder exists in the database
-async fn ensure_folder_in_db(pool: &SqlitePool, folder_path: &str) -> Result<i64, String> {
+// Helper function to ensure a folder exists in the database with proper parent_id hierarchy
+// Limited to root_path (doesn't create folders above root_path)
+async fn ensure_folder_in_db(pool: &SqlitePool, folder_path: &str, root_path: &str) -> Result<i64, String> {
     // Check if folder already exists
     let existing: Option<Folder> = sqlx::query_as::<_, Folder>(
         "SELECT * FROM folders WHERE path = ?"
@@ -1468,11 +1481,42 @@ async fn ensure_folder_in_db(pool: &SqlitePool, folder_path: &str) -> Result<i64
         return Err(format!("Folder does not exist: {}", folder_path));
     }
 
+    // Determine parent_id by recursively ensuring parent folder exists
+    // BUT stop at root_path (root_path itself has parent_id = NULL)
+    let parent_id: Option<i64> = if folder_path == root_path {
+        // This is the root folder, it has no parent
+        None
+    } else if let Some(parent) = path_obj.parent() {
+        let parent_path = parent.to_string_lossy().to_string();
+
+        // Only create parent if it's not empty, exists on filesystem, and is not above root
+        if !parent_path.is_empty() && parent.exists() {
+            // Check if parent is at or below root_path
+            let parent_path_obj = Path::new(&parent_path);
+            let root_path_obj = Path::new(root_path);
+
+            if parent_path_obj.starts_with(root_path_obj) || parent_path == root_path {
+                match ensure_folder_in_db(pool, &parent_path, root_path).await {
+                    Ok(parent_id) => Some(parent_id),
+                    Err(_) => None, // If parent fails, use NULL (root level)
+                }
+            } else {
+                // Parent is above root, so this folder should be at root level
+                None
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     let result = sqlx::query(
-        "INSERT INTO folders (path, name, parent_id) VALUES (?, ?, NULL)"
+        "INSERT INTO folders (path, name, parent_id) VALUES (?, ?, ?)"
     )
     .bind(folder_path)
     .bind(&folder_name)
+    .bind(parent_id)
     .execute(pool)
     .await
     .map_err(|e| e.to_string())?;

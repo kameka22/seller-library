@@ -3,6 +3,7 @@ import { open } from '@tauri-apps/api/dialog'
 import { invoke } from '@tauri-apps/api/tauri'
 import Stepper from './Stepper'
 import { useLanguage } from '../contexts/LanguageContext'
+import { photosAPI } from '../utils/api'
 
 const getSteps = (t) => [
   { id: 1, label: t('photoImport.device') },
@@ -25,6 +26,8 @@ export default function PhotoImport() {
   const [isScanning, setIsScanning] = useState(false)
 
   // Step 2: Destination
+  const [destinationOption, setDestinationOption] = useState('import') // 'import' or 'other'
+  const [importFolder, setImportFolder] = useState('') // Path to <root>/imports
   const [destinationFolder, setDestinationFolder] = useState('')
   const [folderFormatOption, setFolderFormatOption] = useState('automatic') // 'automatic' or 'custom'
   const [customFolderName, setCustomFolderName] = useState('')
@@ -39,10 +42,24 @@ export default function PhotoImport() {
   const [importLog, setImportLog] = useState([])
   const [showSuccess, setShowSuccess] = useState(false)
 
-  // Load volumes on mount
+  // Load volumes and import folder on mount
   useEffect(() => {
     loadVolumes()
+    loadImportFolder()
   }, [])
+
+  const loadImportFolder = async () => {
+    try {
+      const rootFolder = await photosAPI.getRootFolder()
+      if (rootFolder) {
+        const importPath = `${rootFolder}/imports`
+        setImportFolder(importPath)
+        setDestinationFolder(importPath) // Set as default
+      }
+    } catch (error) {
+      console.error('Error loading import folder:', error)
+    }
+  }
 
   const loadVolumes = async () => {
     try {
@@ -87,7 +104,11 @@ export default function PhotoImport() {
   }
 
   const canProceedFromStep2 = () => {
-    return destinationFolder !== ''
+    if (destinationOption === 'import') {
+      return importFolder !== ''
+    } else {
+      return destinationFolder !== ''
+    }
   }
 
   const canProceedFromStep3 = () => {
@@ -123,9 +144,12 @@ export default function PhotoImport() {
     setImportedCount(0)
 
     try {
+      // Use import folder if selected, otherwise use custom destination
+      const finalDestination = destinationOption === 'import' ? importFolder : destinationFolder
+
       const result = await invoke('import_photos', {
         photos: photoURLs,
-        destination: destinationFolder,
+        destination: finalDestination,
         folderFormat: folderFormatOption,
         customFolderName: folderFormatOption === 'custom' ? customFolderName : null,
         description: photoDescription || null,
@@ -143,7 +167,8 @@ export default function PhotoImport() {
       setSelectedVolume(null)
       setPhotoURLs([])
       setPreviewImages([])
-      setDestinationFolder('')
+      setDestinationOption('import')
+      setDestinationFolder(importFolder) // Reset to import folder
       setFolderFormatOption('automatic')
       setCustomFolderName('')
       setPhotoDescription('')
@@ -183,6 +208,10 @@ export default function PhotoImport() {
     } else {
       return customFolderName || t('ui.customName')
     }
+  }
+
+  const getDestinationPath = () => {
+    return destinationOption === 'import' ? importFolder : destinationFolder
   }
 
   return (
@@ -339,25 +368,93 @@ export default function PhotoImport() {
               </p>
             </div>
 
-            {/* Destination Folder */}
+            {/* Destination Folder Options */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
                 {t('ui.destinationFolder')}
               </label>
-              <div className="flex gap-3">
-                <input
-                  type="text"
-                  readOnly
-                  value={destinationFolder || t('ui.noFolderSelected')}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
-                />
-                <button
-                  onClick={handleSelectDestination}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  {t('ui.browse')}
-                </button>
-              </div>
+
+              {/* Import Folder Option */}
+              <button
+                onClick={() => {
+                  setDestinationOption('import')
+                  setDestinationFolder(importFolder)
+                }}
+                className={`
+                  w-full p-4 rounded-lg border-2 text-left mb-3 transition-all
+                  ${destinationOption === 'import'
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }
+                `}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`
+                    w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5
+                    ${destinationOption === 'import' ? 'border-blue-600' : 'border-gray-300'}
+                  `}>
+                    {destinationOption === 'import' && (
+                      <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900 mb-1">{t('ui.importFolder')}</div>
+                    <div className="text-sm text-gray-600 mb-2">
+                      {t('ui.importFolderDesc')}
+                    </div>
+                    {importFolder && (
+                      <div className="text-sm text-gray-500 font-mono bg-white px-3 py-1 rounded border border-gray-200 inline-block">
+                        {importFolder}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </button>
+
+              {/* Other Folder Option */}
+              <button
+                onClick={() => setDestinationOption('other')}
+                className={`
+                  w-full p-4 rounded-lg border-2 text-left transition-all
+                  ${destinationOption === 'other'
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }
+                `}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`
+                    w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5
+                    ${destinationOption === 'other' ? 'border-blue-600' : 'border-gray-300'}
+                  `}>
+                    {destinationOption === 'other' && (
+                      <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900 mb-1">{t('ui.otherFolder')}</div>
+                    <div className="text-sm text-gray-600 mb-3">
+                      {t('ui.otherFolderDesc')}
+                    </div>
+                    {destinationOption === 'other' && (
+                      <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          readOnly
+                          value={destinationFolder || t('ui.noFolderSelected')}
+                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                        />
+                        <button
+                          onClick={handleSelectDestination}
+                          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          {t('ui.browse')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </button>
             </div>
 
             {/* Folder Format Options */}
@@ -439,11 +536,11 @@ export default function PhotoImport() {
             </div>
 
             {/* Preview */}
-            {destinationFolder && (
+            {getDestinationPath() && (
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                 <div className="text-sm text-gray-600 mb-1">{t('ui.fullPath')}</div>
                 <div className="font-mono text-sm text-gray-900 break-all">
-                  {destinationFolder}/{getFolderPreview()}
+                  {getDestinationPath()}/{getFolderPreview()}
                 </div>
               </div>
             )}

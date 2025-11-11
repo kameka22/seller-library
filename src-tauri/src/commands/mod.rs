@@ -1463,28 +1463,40 @@ pub async fn sync_database(pool: State<'_, SqlitePool>) -> Result<SyncDatabaseRe
 // Rebuild folder hierarchy based on root_path
 // Sets parent_id correctly for all existing folders
 async fn rebuild_folder_hierarchy(pool: &SqlitePool, root_path: &str) -> Result<(), String> {
+    println!("=== REBUILD FOLDER HIERARCHY ===");
+    println!("Root path: {}", root_path);
+
     // Get all folders
     let folders = sqlx::query_as::<_, Folder>("SELECT * FROM folders")
         .fetch_all(pool)
         .await
         .map_err(|e| e.to_string())?;
 
+    println!("Total folders in DB: {}", folders.len());
+
     // For each folder, determine its correct parent_id
     for folder in folders {
+        println!("\n--- Folder: {} (id: {}, current parent_id: {:?}) ---", folder.path, folder.id, folder.parent_id);
+
         let folder_path = Path::new(&folder.path);
 
         // Determine correct parent_id
         let correct_parent_id: Option<i64> = if folder.path == root_path {
             // This is root, should not exist in DB but if it does, skip it
+            println!("  -> Skipping: this IS the root path");
             continue;
         } else if let Some(parent) = folder_path.parent() {
             let parent_path = parent.to_string_lossy().to_string();
+            println!("  -> Parent path: {}", parent_path);
+            println!("  -> Comparing parent_path == root_path: {} == {}", parent_path, root_path);
 
             if parent_path == root_path {
                 // Parent is root, so this is level 1 -> parent_id = NULL
+                println!("  -> LEVEL 1 FOLDER: parent is root, setting parent_id = NULL");
                 None
             } else {
                 // Parent is below root, find its ID
+                println!("  -> Looking for parent folder in DB...");
                 let parent_folder: Option<(i64,)> = sqlx::query_as(
                     "SELECT id FROM folders WHERE path = ?"
                 )
@@ -1493,23 +1505,36 @@ async fn rebuild_folder_hierarchy(pool: &SqlitePool, root_path: &str) -> Result<
                 .await
                 .map_err(|e| e.to_string())?;
 
-                parent_folder.map(|(id,)| id)
+                if let Some((parent_id,)) = parent_folder {
+                    println!("  -> Found parent with id: {}", parent_id);
+                    Some(parent_id)
+                } else {
+                    println!("  -> Parent not found in DB, setting parent_id = NULL");
+                    None
+                }
             }
         } else {
+            println!("  -> No parent, setting parent_id = NULL");
             None
         };
 
+        println!("  -> Correct parent_id should be: {:?}", correct_parent_id);
+
         // Update parent_id if different
         if folder.parent_id != correct_parent_id {
+            println!("  -> UPDATING parent_id from {:?} to {:?}", folder.parent_id, correct_parent_id);
             sqlx::query("UPDATE folders SET parent_id = ? WHERE id = ?")
                 .bind(correct_parent_id)
                 .bind(folder.id)
                 .execute(pool)
                 .await
                 .map_err(|e| e.to_string())?;
+        } else {
+            println!("  -> No update needed");
         }
     }
 
+    println!("\n=== REBUILD COMPLETE ===\n");
     Ok(())
 }
 

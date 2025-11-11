@@ -72,10 +72,20 @@ export default function PhotoTreeView({
 
   // Get root folders (folders with parent_id = null)
   const rootFolders = useMemo(() => {
-    return folders
-      .filter(f => f.parent_id === null)
+    console.log('=== PhotoTreeView: Computing rootFolders ===')
+    console.log('Total folders:', folders.length)
+    console.log('All folders:', folders)
+
+    const rootOnly = folders.filter(f => f.parent_id === null)
+    console.log('Folders with parent_id === null:', rootOnly.length)
+    console.log('Root folders:', rootOnly)
+
+    const mapped = rootOnly
       .map(f => folderMap.get(f.id))
       .sort((a, b) => a.name.localeCompare(b.name))
+
+    console.log('Mapped root folders:', mapped)
+    return mapped
   }, [folders, folderMap])
 
   // Get current folder data

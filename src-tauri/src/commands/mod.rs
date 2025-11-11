@@ -319,18 +319,34 @@ pub async fn delete_folder_recursive(
         errors.push(format!("Failed to delete folder: {}", e));
     }
 
-    // Delete the folder and all its subfolders from the folders table
-    match sqlx::query("DELETE FROM folders WHERE path LIKE ?")
+    // Now clean up folders from DB that no longer exist on filesystem
+    // This is the same approach as sync_database
+    let all_folders = sqlx::query_as::<_, Folder>("SELECT * FROM folders WHERE path LIKE ?")
         .bind(format!("{}%", request.folder_path))
-        .execute(pool.inner())
+        .fetch_all(pool.inner())
         .await
-    {
-        Ok(_) => {},
-        Err(e) => errors.push(format!("Failed to delete folder from DB: {}", e)),
+        .map_err(|e| e.to_string())?;
+
+    let mut folders_removed = 0;
+    for folder in all_folders {
+        let folder_fs_path = Path::new(&folder.path);
+
+        // Delete from DB if folder doesn't exist on filesystem
+        if !folder_fs_path.exists() {
+            match sqlx::query("DELETE FROM folders WHERE id = ?")
+                .bind(folder.id)
+                .execute(pool.inner())
+                .await
+            {
+                Ok(_) => folders_removed += 1,
+                Err(e) => errors.push(format!("Failed to delete folder {} from DB: {}", folder.id, e)),
+            }
+        }
     }
 
     Ok(serde_json::json!({
         "deleted": deleted_count,
+        "folders_removed": folders_removed,
         "errors": errors
     }))
 }
@@ -362,18 +378,30 @@ pub async fn delete_folder_recursive_db_only(
         }
     }
 
-    // Delete the folder and all its subfolders from the folders table
-    match sqlx::query("DELETE FROM folders WHERE path LIKE ?")
+    // Clean up folders from DB - get all matching folders and check if they exist
+    let all_folders = sqlx::query_as::<_, Folder>("SELECT * FROM folders WHERE path LIKE ?")
         .bind(format!("{}%", request.folder_path))
-        .execute(pool.inner())
+        .fetch_all(pool.inner())
         .await
-    {
-        Ok(_) => {},
-        Err(e) => errors.push(format!("Failed to delete folder from DB: {}", e)),
+        .map_err(|e| e.to_string())?;
+
+    let mut folders_removed = 0;
+    for folder in all_folders {
+        // For DB-only deletion, we remove the folder entry regardless of filesystem
+        // since we're intentionally keeping files but removing DB references
+        match sqlx::query("DELETE FROM folders WHERE id = ?")
+            .bind(folder.id)
+            .execute(pool.inner())
+            .await
+        {
+            Ok(_) => folders_removed += 1,
+            Err(e) => errors.push(format!("Failed to delete folder {} from DB: {}", folder.id, e)),
+        }
     }
 
     Ok(serde_json::json!({
         "deleted": deleted_count,
+        "folders_removed": folders_removed,
         "errors": errors
     }))
 }

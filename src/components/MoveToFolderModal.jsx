@@ -144,13 +144,18 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
         console.log('[MoveToFolderModal] onFolderCreated completed')
       }
 
-      // Navigate to the newly created folder using the ID from the result
-      // We do this AFTER onFolderCreated completes to ensure data is reloaded
-      console.log('[MoveToFolderModal] Navigating to folder ID:', result.id)
-      setCurrentFolderId(result.id)
-
       setIsCreatingFolder(false)
       setNewFolderName('')
+
+      // Navigate to the newly created folder using the ID from the result
+      // We do this in the next event loop cycle to ensure React has finished
+      // updating the folders prop and recalculating the folderMap memo
+      console.log('[MoveToFolderModal] Scheduling navigation to folder ID:', result.id)
+      setTimeout(() => {
+        console.log('[MoveToFolderModal] Executing navigation to folder ID:', result.id)
+        console.log('[MoveToFolderModal] Current folders prop:', folders.length)
+        setCurrentFolderId(result.id)
+      }, 0)
     } catch (err) {
       console.error('Error creating folder:', err)
     }

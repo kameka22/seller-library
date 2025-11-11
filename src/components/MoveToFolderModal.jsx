@@ -165,16 +165,16 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
       setIsCreatingFolder(false)
       setNewFolderName('')
 
-      // Set pending navigation - will trigger once folders prop updates and folderMap recalculates
-      console.log('[MoveToFolderModal] Setting pending navigation to folder ID:', result.id)
-      setPendingNavigationId(result.id)
-
-      // Notify parent to reload folders
+      // Notify parent to reload folders FIRST
       if (onFolderCreated) {
         console.log('[MoveToFolderModal] Calling onFolderCreated...')
         await onFolderCreated()
         console.log('[MoveToFolderModal] onFolderCreated completed')
       }
+
+      // THEN set pending navigation - this ensures the state update happens after folders reload
+      console.log('[MoveToFolderModal] Setting pending navigation to folder ID:', result.id)
+      setPendingNavigationId(result.id)
     } catch (err) {
       console.error('Error creating folder:', err)
     }

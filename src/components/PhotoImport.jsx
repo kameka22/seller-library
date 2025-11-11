@@ -204,7 +204,7 @@ export default function PhotoImport() {
       const day = String(now.getDate()).padStart(2, '0')
       const hours = String(now.getHours()).padStart(2, '0')
       const minutes = String(now.getMinutes()).padStart(2, '0')
-      return `${year}-${month}-${day} ${hours}-${minutes}`
+      return `${day}-${month}-${year} ${hours}-${minutes}`
     } else {
       return customFolderName || t('ui.customName')
     }
@@ -341,8 +341,8 @@ export default function PhotoImport() {
                 {previewImages.length > 0 && (
                   <div className="grid grid-cols-4 gap-2">
                     {previewImages.map((img, index) => (
-                      <div key={index} className="aspect-square bg-gray-200 rounded overflow-hidden">
-                        <img src={img} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                      <div key={index} className="bg-gray-200 rounded overflow-hidden flex items-center justify-center" style={{maxHeight: '200px'}}>
+                        <img src={img} alt={`Preview ${index + 1}`} className="max-h-[200px] w-auto object-contain" />
                       </div>
                     ))}
                   </div>

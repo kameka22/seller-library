@@ -229,7 +229,12 @@ export default function PhotoTreeView({
     }
   }
 
-  if (photos.length === 0 && folders.length === 0) {
+  // Only show "no photos in collection" message when at root and truly empty
+  // Use allFolders to check if collection is really empty, not just current folder
+  const isCollectionEmpty = (allFolders.length > 0 ? allFolders : folders).length === 0 && photos.length === 0
+  const isAtRoot = currentFolderId === null
+
+  if (isCollectionEmpty && isAtRoot) {
     return (
       <div className="text-center py-12 text-gray-500">
         <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

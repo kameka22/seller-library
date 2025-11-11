@@ -1418,8 +1418,13 @@ pub async fn sync_database(pool: State<'_, SqlitePool>) -> Result<SyncDatabaseRe
         }
     }
 
-    // Rebuild folder hierarchy based on root_path
+    // Scan and create all folders, then rebuild hierarchy based on root_path
     if !root_path.is_empty() {
+        match scan_and_create_folders(pool.inner(), &root_path).await {
+            Ok(_) => {},
+            Err(e) => errors.push(format!("Failed to scan folders: {}", e)),
+        }
+
         match rebuild_folder_hierarchy(pool.inner(), &root_path).await {
             Ok(_) => {},
             Err(e) => errors.push(format!("Failed to rebuild folder hierarchy: {}", e)),
@@ -1458,6 +1463,65 @@ pub async fn sync_database(pool: State<'_, SqlitePool>) -> Result<SyncDatabaseRe
         folders_cleaned,
         errors,
     })
+}
+
+// Scan all subdirectories of root_path and create them in database
+async fn scan_and_create_folders(pool: &SqlitePool, root_path: &str) -> Result<i32, String> {
+    println!("=== SCANNING FOLDERS IN: {} ===", root_path);
+
+    let root = Path::new(root_path);
+    if !root.exists() || !root.is_dir() {
+        return Err(format!("Root path does not exist or is not a directory: {}", root_path));
+    }
+
+    let mut folders_created = 0;
+
+    // Recursively scan all directories
+    fn scan_dir_recursive(
+        dir: &Path,
+        root_path: &str,
+        pool: &SqlitePool,
+        count: &mut i32,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send + '_>> {
+        Box::pin(async move {
+            let entries = match std::fs::read_dir(dir) {
+                Ok(entries) => entries,
+                Err(e) => return Err(format!("Failed to read directory {}: {}", dir.display(), e)),
+            };
+
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    let path = entry.path();
+
+                    if path.is_dir() {
+                        let folder_path = path.to_string_lossy().to_string();
+                        println!("  Found directory: {}", folder_path);
+
+                        // Create folder in database
+                        match ensure_folder_in_db(pool, &folder_path, root_path).await {
+                            Ok(_) => {
+                                *count += 1;
+                                println!("    -> Created in DB");
+                            }
+                            Err(e) => {
+                                println!("    -> Error: {}", e);
+                            }
+                        }
+
+                        // Recursively scan subdirectories
+                        scan_dir_recursive(&path, root_path, pool, count).await?;
+                    }
+                }
+            }
+
+            Ok(())
+        })
+    }
+
+    scan_dir_recursive(root, root_path, pool, &mut folders_created).await?;
+
+    println!("=== SCAN COMPLETE: {} folders created ===\n", folders_created);
+    Ok(folders_created)
 }
 
 // Rebuild folder hierarchy based on root_path
@@ -1647,7 +1711,12 @@ pub async fn set_root_folder(pool: State<'_, SqlitePool>, path: String) -> Resul
     .await
     .map_err(|e| e.to_string())?;
 
-    // Rebuild folder hierarchy immediately after setting root folder
+    // Scan and create all folders in the root path
+    println!("Scanning folders in root path...");
+    scan_and_create_folders(pool.inner(), &path).await?;
+
+    // Rebuild folder hierarchy to ensure correct parent_id values
+    println!("Rebuilding folder hierarchy...");
     rebuild_folder_hierarchy(pool.inner(), &path).await?;
 
     Ok(())

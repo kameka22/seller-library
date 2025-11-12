@@ -318,6 +318,13 @@ export default function PhotoManager() {
     setFolders(prevFolders => [...prevFolders, newFolder])
   }
 
+  const showSuccessWithTimeout = (message) => {
+    setSuccessMessage(message)
+    setTimeout(() => {
+      setSuccessMessage(null)
+    }, 5000) // 5 seconds
+  }
+
   const confirmMove = async (destinationPath, deleteSourceFolder = false) => {
     const movingFolders = selectedItems
       .filter(id => id.startsWith('folder-'))
@@ -361,7 +368,7 @@ export default function PhotoManager() {
         setError(`${t('ui.moveSuccess')} - ${result.moved} ${t('ui.items')}. ${result.errors.length} ${t('ui.errorEncountered')}`)
       } else {
         // Complete success
-        setSuccessMessage(`${t('ui.moveSuccess')} - ${result.moved} ${t('ui.items')}`)
+        showSuccessWithTimeout(`${t('ui.moveSuccess')} - ${result.moved} ${t('ui.items')}`)
       }
     } catch (err) {
       console.error('Error moving items:', err)
@@ -421,7 +428,7 @@ export default function PhotoManager() {
       await loadPhotos()
 
       // Show success message AFTER loading photos
-      setSuccessMessage(t('objects.createObjectSuccess'))
+      showSuccessWithTimeout(t('objects.createObjectSuccess'))
     } catch (err) {
       console.error('Error creating object:', err)
       setError(t('errors.creatingObject') + ': ' + (err.message || err))
@@ -473,7 +480,7 @@ export default function PhotoManager() {
         setError(`${t('ui.copySuccess')} - ${result.copied} ${t('ui.items')}. ${result.errors.length} ${t('ui.errorEncountered')}`)
       } else {
         // Complete success
-        setSuccessMessage(`${t('ui.copySuccess')} - ${result.copied} ${t('ui.items')}`)
+        showSuccessWithTimeout(`${t('ui.copySuccess')} - ${result.copied} ${t('ui.items')}`)
       }
     } catch (err) {
       console.error('Error copying items:', err)

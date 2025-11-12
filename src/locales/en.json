@@ -207,7 +207,21 @@
     "photosDetected": "photo(s) detected",
     "errorsEncountered": "Errors encountered:",
     "moreErrors": "... and {{count}} more error(s)",
-    "descriptionPlaceholder": "Example: 'Beautiful Quimper faience', 'Bronze statue'..."
+    "descriptionPlaceholder": "Example: 'Beautiful Quimper faience', 'Bronze statue'...",
+    "photosDetectedMessage": "There {{beVerb}} {{count}} photo{{plural}} detected.",
+    "importAll": "Import all (default choice)",
+    "importAllDescription": "Import all {{count}} detected photos",
+    "selectPhotos": "Select photos",
+    "selectPhotosDescription": "{{count}} photo{{plural}} selected",
+    "choosePhotosToImport": "Choose photos to import",
+    "preview": "Preview:",
+    "selectPhotosToImport": "Select photos to import",
+    "selectAllPhotos": "Select all",
+    "deselectAllPhotos": "Deselect all",
+    "photosSelectedCount": "{{selected}} / {{total}} photo{{plural}} selected",
+    "manyPhotosWarningTitle": "Display many photos",
+    "manyPhotosWarningMessage": "The number of photos is substantial ({{count}} photos). Do you really want to display them for selection?",
+    "yesDisplay": "Yes, display"
   },
   "errors": {
     "loadingCategories": "Error loading categories",

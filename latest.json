@@ -1,15 +1,15 @@
 {
-  "version": "0.1.4",
-  "notes": "Correction de l'enregistrement des photos si écrasée pas mise à jour dans l'interface",
-  "pub_date": "2024-11-09T17:00:00Z",
+  "version": "0.2.0",
+  "notes": "Version 0.2.0 - Corrections importantes\n\n• Correction de l'affichage de la photo principale sur les objets : le flag is_main dans les dossiers détermine maintenant correctement la photo affichée en premier\n• Correction du module d'import : le fichier description.txt est maintenant créé et visible dans l'interface\n• Amélioration de l'affichage du nom du fichier de description dans le step 3 de l'import",
+  "pub_date": "2025-11-12T14:41:58Z",
   "platforms": {
     "darwin-aarch64": {
       "signature": "",
-      "url": "https://github.com/kameka22/seller-library/releases/download/0.1.4/seller-library_0.1.4_aarch64.app.tar.gz"
+      "url": "https://github.com/kameka22/seller-library/releases/download/0.2.0/seller-library_0.2.0_aarch64.app.tar.gz"
     },
     "darwin-x86_64": {
       "signature": "",
-      "url": "https://github.com/kameka22/seller-library/releases/download/0.1.4/seller-library_0.1.4_x64.app.tar.gz"
+      "url": "https://github.com/kameka22/seller-library/releases/download/0.2.0/seller-library_0.2.0_x64.app.tar.gz"
     }
   }
 }

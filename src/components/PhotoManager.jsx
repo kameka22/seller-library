@@ -27,6 +27,7 @@ export default function PhotoManager() {
   const [showMoveModal, setShowMoveModal] = useState(false)
   const [showCopyModal, setShowCopyModal] = useState(false)
   const [showCreateObjectModal, setShowCreateObjectModal] = useState(false)
+  const [showCreateDescriptionModal, setShowCreateDescriptionModal] = useState(false)
   const [deleteInfo, setDeleteInfo] = useState({ folders: 0, photos: 0 })
   const [deletePhysicalFiles, setDeletePhysicalFiles] = useState(true)
   const [currentFolderId, setCurrentFolderId] = useState(null) // null = root
@@ -491,6 +492,53 @@ export default function PhotoManager() {
     }
   }
 
+  const handleCreateDescriptionFile = () => {
+    setShowCreateDescriptionModal(true)
+  }
+
+  const confirmCreateDescriptionFile = async () => {
+    try {
+      setScanning(true)
+      setError(null)
+
+      // Get current folder path
+      let folderPath = ''
+      if (currentFolderId === null) {
+        // Root folder
+        folderPath = rootFolder || ''
+      } else {
+        const currentFolder = folders.find(f => f.id === currentFolderId)
+        if (currentFolder) {
+          folderPath = currentFolder.path
+        }
+      }
+
+      // Call API to create description file
+      await textFilesAPI.createDescriptionFile(folderPath)
+
+      // Close modal
+      setShowCreateDescriptionModal(false)
+
+      // Reload to show the new text file
+      await loadPhotos()
+
+      // Show success message
+      showSuccessWithTimeout(t('ui.createDescriptionFile'))
+    } catch (err) {
+      console.error('Error creating description file:', err)
+      setShowCreateDescriptionModal(false)
+
+      // Check if error is about file already existing
+      if (err && (err.toString().includes('already exists') || err.toString().includes('existe déjà'))) {
+        setError(t('ui.descriptionFileAlreadyExists'))
+      } else {
+        setError('Error creating description file: ' + (err.message || err))
+      }
+    } finally {
+      setScanning(false)
+    }
+  }
+
   // First filter by current folder (visual level), then apply search query
   const currentFolderPhotos = photos.filter(p => p.folder_id === currentFolderId)
   const filteredPhotos = currentFolderPhotos.filter(photo =>
@@ -728,7 +776,16 @@ export default function PhotoManager() {
               <span className="ml-2 font-semibold text-blue-600">{selectedItems.length} {t('ui.items')}</span>
             </div>
           )}
-          <div className="ml-auto">
+          <div className="ml-auto flex gap-2">
+            <button
+              onClick={handleCreateDescriptionFile}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {t('ui.createDescriptionFile')}
+            </button>
             <button
               onClick={handleSelectAll}
               className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors font-medium"
@@ -936,6 +993,18 @@ export default function PhotoManager() {
           }}
         />
       )}
+
+      {/* Create Description File Modal */}
+      <ConfirmModal
+        isOpen={showCreateDescriptionModal}
+        onClose={() => setShowCreateDescriptionModal(false)}
+        onConfirm={confirmCreateDescriptionFile}
+        title={t('ui.createDescriptionFile')}
+        message={t('ui.createDescriptionFileConfirm')}
+        confirmText={t('common.create')}
+        cancelText={t('common.cancel')}
+        danger={false}
+      />
     </div>
   )
 }

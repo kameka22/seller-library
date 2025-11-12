@@ -416,6 +416,9 @@
     "enterTextContent": "Enter file content...",
     "lastModified": "Last modified",
     "saving": "Saving...",
-    "deleteSourceFolder": "Delete source folder of photos"
+    "deleteSourceFolder": "Delete source folder of photos",
+    "createDescriptionFile": "Create a description file",
+    "createDescriptionFileConfirm": "Create a description file at this location?",
+    "descriptionFileAlreadyExists": "The description file already exists at this location"
   }
 }

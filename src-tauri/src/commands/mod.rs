@@ -865,6 +865,78 @@ pub async fn delete_text_file_db_only(pool: State<'_, SqlitePool>, file_id: i64)
     }
 }
 
+#[derive(Deserialize)]
+pub struct CreateDescriptionFileRequest {
+    pub folder_path: String,
+}
+
+#[tauri::command]
+pub async fn create_description_file(
+    pool: State<'_, SqlitePool>,
+    request: CreateDescriptionFileRequest,
+) -> Result<TextFile, String> {
+    let folder_path = Path::new(&request.folder_path);
+
+    // Check if folder exists
+    if !folder_path.exists() || !folder_path.is_dir() {
+        return Err("Folder does not exist".to_string());
+    }
+
+    // Create description.txt file path
+    let desc_file_path = folder_path.join("description.txt");
+
+    // Check if file already exists
+    if desc_file_path.exists() {
+        return Err("The description file already exists at this location".to_string());
+    }
+
+    // Create the file with empty content
+    fs::write(&desc_file_path, "")
+        .map_err(|e| format!("Failed to create description file: {}", e))?;
+
+    // Get file metadata
+    let metadata = fs::metadata(&desc_file_path)
+        .map_err(|e| format!("Failed to get file metadata: {}", e))?;
+    let file_size = metadata.len() as i64;
+
+    // Get root folder path to ensure folder hierarchy
+    let root_folder = sqlx::query_as::<_, (String,)>("SELECT value FROM settings WHERE key = 'root_folder'")
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let root_path = root_folder.map(|(value,)| value).unwrap_or_default();
+
+    // Ensure folder exists in database
+    let folder_path_str = request.folder_path.clone();
+    let folder_id = ensure_folder_in_db(pool.inner(), &folder_path_str, &root_path)
+        .await
+        .map_err(|e| format!("Failed to ensure folder in database: {}", e))?;
+
+    // Insert into database
+    let file_path_str = desc_file_path.to_string_lossy().to_string();
+    let result = sqlx::query(
+        "INSERT INTO text_files (file_path, file_name, folder_id, file_size)
+         VALUES (?, ?, ?, ?)"
+    )
+    .bind(&file_path_str)
+    .bind("description.txt")
+    .bind(folder_id)
+    .bind(file_size)
+    .execute(pool.inner())
+    .await
+    .map_err(|e| e.to_string())?;
+
+    // Retrieve the created text file
+    let text_file = sqlx::query_as::<_, TextFile>("SELECT * FROM text_files WHERE id = ?")
+        .bind(result.last_insert_rowid())
+        .fetch_one(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(text_file)
+}
+
 fn is_text_file(path: &Path) -> bool {
     if let Some(ext) = path.extension() {
         let ext = ext.to_string_lossy().to_lowercase();

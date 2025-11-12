@@ -42,6 +42,7 @@ async fn main() {
             commands::save_text_file_content,
             commands::delete_text_file,
             commands::delete_text_file_db_only,
+            commands::create_description_file,
             commands::list_platforms,
             commands::create_platform,
             commands::update_platform,

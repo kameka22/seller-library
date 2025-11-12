@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
-import { photosAPI, textFilesAPI } from '../utils/api'
+import { invoke } from '@tauri-apps/api/tauri'
+import { photosAPI, textFilesAPI, objectsAPI } from '../utils/api'
 import PhotoTreeView from './PhotoTreeView'
 import PhotoDetail from './PhotoDetail'
 import TextFileEdit from './TextFileEdit'
 import ConfirmModal from './ConfirmModal'
 import MoveToFolderModal from './MoveToFolderModal'
+import CreateObjectModal from './CreateObjectModal'
 import { useLanguage } from '../contexts/LanguageContext'
 
 export default function PhotoManager() {
@@ -14,6 +16,7 @@ export default function PhotoManager() {
   const [folders, setFolders] = useState([]) // Real-time folder structure from file system
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [successMessage, setSuccessMessage] = useState(null)
   const [selectedPhoto, setSelectedPhoto] = useState(null)
   const [editingPhoto, setEditingPhoto] = useState(null)
   const [editingTextFile, setEditingTextFile] = useState(null)
@@ -23,10 +26,12 @@ export default function PhotoManager() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showMoveModal, setShowMoveModal] = useState(false)
   const [showCopyModal, setShowCopyModal] = useState(false)
+  const [showCreateObjectModal, setShowCreateObjectModal] = useState(false)
   const [deleteInfo, setDeleteInfo] = useState({ folders: 0, photos: 0 })
   const [deletePhysicalFiles, setDeletePhysicalFiles] = useState(true)
   const [currentFolderId, setCurrentFolderId] = useState(null) // null = root
   const [rootFolder, setRootFolder] = useState(null) // Root folder path
+  const [categories, setCategories] = useState([])
 
   useEffect(() => {
     loadInitialData()
@@ -35,6 +40,7 @@ export default function PhotoManager() {
   const loadInitialData = async () => {
     await loadPhotos()
     await loadRootFolder()
+    await loadCategories()
   }
 
   const loadRootFolder = async () => {
@@ -43,6 +49,15 @@ export default function PhotoManager() {
       setRootFolder(root)
     } catch (err) {
       console.error('Error loading root folder:', err)
+    }
+  }
+
+  const loadCategories = async () => {
+    try {
+      const data = await invoke('list_categories')
+      setCategories(data)
+    } catch (err) {
+      console.error('Error loading categories:', err)
     }
   }
 
@@ -244,6 +259,17 @@ export default function PhotoManager() {
     }
   }
 
+  const handleToggleMain = async (photoId) => {
+    try {
+      await photosAPI.toggleMain(photoId)
+      // Reload photos to update the is_main status
+      await loadPhotos()
+    } catch (err) {
+      console.error('Error toggling main photo:', err)
+      setError(t('photoManager.toggleMainError') || 'Error toggling main photo')
+    }
+  }
+
   const handleEditPhoto = (photo) => {
     setEditingPhoto(photo)
   }
@@ -324,9 +350,13 @@ export default function PhotoManager() {
       // Clear selection
       setSelectedItems([])
 
-      // Show success message if there were errors
+      // Show appropriate message
       if (result.errors && result.errors.length > 0) {
+        // Partial success with errors
         setError(`${t('ui.moveSuccess')} - ${result.moved} ${t('ui.items')}. ${result.errors.length} ${t('ui.errorEncountered')}`)
+      } else {
+        // Complete success
+        setSuccessMessage(`${t('ui.moveSuccess')} - ${result.moved} ${t('ui.items')}`)
       }
     } catch (err) {
       console.error('Error moving items:', err)
@@ -339,6 +369,60 @@ export default function PhotoManager() {
   const handleCopySelected = () => {
     if (selectedItems.length === 0) return
     setShowCopyModal(true)
+  }
+
+  const handleCreateObject = () => {
+    if (selectedItems.length === 0) return
+    setShowCreateObjectModal(true)
+  }
+
+  const confirmCreateObject = async (objectData) => {
+    try {
+      setScanning(true)
+
+      // Create the object
+      const createdObject = await objectsAPI.create(objectData)
+
+      // Get selected photos with full data to access is_main field
+      const selectedPhotoIds = selectedItems
+        .filter(id => id.startsWith('photo-'))
+        .map(id => parseInt(id.replace('photo-', '')))
+
+      const selectedPhotos = photos.filter(p => selectedPhotoIds.includes(p.id))
+
+      // Sort photos: main photo first, then others
+      const sortedPhotos = selectedPhotos.sort((a, b) => {
+        if (a.is_main && !b.is_main) return -1
+        if (!a.is_main && b.is_main) return 1
+        return 0
+      })
+
+      // Associate all selected photos to the object in sorted order
+      for (const photo of sortedPhotos) {
+        try {
+          await photosAPI.associateToObject(photo.id, createdObject.id)
+        } catch (err) {
+          console.error(`Error associating photo ${photo.id}:`, err)
+        }
+      }
+
+      // Close modal
+      setShowCreateObjectModal(false)
+
+      // Clear selection
+      setSelectedItems([])
+
+      // Reload photos to update associations
+      await loadPhotos()
+
+      // Show success message AFTER loading photos
+      setSuccessMessage(t('objects.createObjectSuccess'))
+    } catch (err) {
+      console.error('Error creating object:', err)
+      setError(t('errors.creatingObject') + ': ' + (err.message || err))
+    } finally {
+      setScanning(false)
+    }
   }
 
   const confirmCopy = async (destinationPath) => {
@@ -378,9 +462,13 @@ export default function PhotoManager() {
       // Clear selection
       setSelectedItems([])
 
-      // Show success message if there were errors
+      // Show appropriate message
       if (result.errors && result.errors.length > 0) {
+        // Partial success with errors
         setError(`${t('ui.copySuccess')} - ${result.copied} ${t('ui.items')}. ${result.errors.length} ${t('ui.errorEncountered')}`)
+      } else {
+        // Complete success
+        setSuccessMessage(`${t('ui.copySuccess')} - ${result.copied} ${t('ui.items')}`)
       }
     } catch (err) {
       console.error('Error copying items:', err)
@@ -411,6 +499,51 @@ export default function PhotoManager() {
     (textFile.file_path && textFile.file_path.toLowerCase().includes(searchQuery.toLowerCase()))
   )
 
+  // Determine if "Create Object" button should be visible
+  // Visible only in subfolders of the "categories" folder at root level
+  const shouldShowCreateObjectButton = useMemo(() => {
+    if (currentFolderId === null) return false // Not at root level
+
+    const currentFolder = folders.find(f => f.id === currentFolderId)
+    if (!currentFolder) return false
+
+    // We are at a root folder, button should not be visible
+    if (currentFolder.parent_id === null) return false
+
+    // Find the root ancestor by going up the parent chain
+    let ancestorId = currentFolder.parent_id
+    let rootAncestor = null
+
+    while (ancestorId !== null) {
+      const ancestor = folders.find(f => f.id === ancestorId)
+      if (!ancestor) break
+
+      if (ancestor.parent_id === null) {
+        // Found the root ancestor
+        rootAncestor = ancestor
+        break
+      }
+
+      ancestorId = ancestor.parent_id
+    }
+
+    // Check if root ancestor is named "categories"
+    if (!rootAncestor || rootAncestor.name.toLowerCase() !== 'categories') return false
+
+    // Check if there's at least one photo or text file selected
+    const hasPhotos = selectedItems.some(id => id.startsWith('photo-'))
+    const hasTextFiles = selectedItems.some(id => id.startsWith('textfile-'))
+
+    return hasPhotos || hasTextFiles
+  }, [currentFolderId, folders, selectedItems])
+
+  // Get current folder info for modal
+  const currentFolderInfo = useMemo(() => {
+    if (currentFolderId === null) return null
+    const currentFolder = folders.find(f => f.id === currentFolderId)
+    return currentFolder || null
+  }, [currentFolderId, folders])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -421,8 +554,52 @@ export default function PhotoManager() {
 
   return (
     <div className="space-y-4">
+      {/* Success Message */}
+      {successMessage && (
+        <div className="p-4 rounded-lg bg-green-50 border border-green-200">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm text-green-800">{successMessage}</p>
+            </div>
+            <button
+              onClick={() => setSuccessMessage(null)}
+              className="flex-shrink-0 text-green-400 hover:text-green-600"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <div className="p-4 rounded-lg bg-red-50 border border-red-200">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className="flex-shrink-0 text-red-400 hover:text-red-600"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header Actions */}
-      <div className="flex gap-4 items-center">
+      <div className="flex items-center justify-between">
         <input
           type="text"
           placeholder={t('placeholders.photoSearch')}
@@ -431,7 +608,7 @@ export default function PhotoManager() {
           className="w-1/2 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         {selectedItems.length > 0 && (
-          <>
+          <div className="flex gap-2">
             <button
               onClick={handleCopySelected}
               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors whitespace-nowrap flex items-center gap-2"
@@ -459,7 +636,18 @@ export default function PhotoManager() {
               </svg>
               {t('common.delete')}
             </button>
-          </>
+            {shouldShowCreateObjectButton && (
+              <button
+                onClick={() => setShowCreateObjectModal(true)}
+                className="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700 transition-colors whitespace-nowrap flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                {t('objects.createObject')}
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -522,6 +710,7 @@ export default function PhotoManager() {
           onDeleteItems={handleDeleteItems}
           onMoveItems={handleMoveItems}
           onCopyItems={handleCopyItems}
+          onToggleMain={handleToggleMain}
           rootFolder={rootFolder}
           allFolders={folders}
           allPhotos={photos}
@@ -648,6 +837,28 @@ export default function PhotoManager() {
         rootFolder={rootFolder}
         title="ui.copyItems"
         buttonText="ui.copyHere"
+      />
+
+      {/* Create Object Modal */}
+      <CreateObjectModal
+        isOpen={showCreateObjectModal}
+        onClose={() => setShowCreateObjectModal(false)}
+        onConfirm={confirmCreateObject}
+        selectedPhotos={
+          selectedItems
+            .filter(id => id.startsWith('photo-'))
+            .map(id => photos.find(p => p.id === parseInt(id.replace('photo-', ''))))
+            .filter(Boolean)
+        }
+        selectedTextFiles={
+          selectedItems
+            .filter(id => id.startsWith('textfile-'))
+            .map(id => textFiles.find(tf => tf.id === parseInt(id.replace('textfile-', ''))))
+            .filter(Boolean)
+        }
+        currentFolder={currentFolderInfo}
+        allFolders={folders}
+        categories={categories}
       />
 
       {/* Text File Edit Modal */}

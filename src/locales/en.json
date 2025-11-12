@@ -60,7 +60,13 @@
     "objectDetails": "Object Details",
     "addPhoto": "Add Photo",
     "managePhotos": "Manage Photos",
-    "associatedPhotos": "Associated Photos"
+    "associatedPhotos": "Associated Photos",
+    "createObject": "Create an object",
+    "createObjectFromPhotos": "Create an object from photos",
+    "selectedContent": "Selected content",
+    "createObjectSuccess": "Object created successfully!",
+    "viewObject": "View object",
+    "clickToViewObject": "Click here to view the object"
   },
   "categories": {
     "title": "Categories",
@@ -96,7 +102,9 @@
     "selectedPhotos": "selected photo(s)",
     "allFolders": "All folders",
     "selected": "selected",
-    "editPhoto": "Edit Photo"
+    "editPhoto": "Edit Photo",
+    "markAsMain": "Mark as main photo",
+    "unmarkAsMain": "Unmark as main photo"
   },
   "platforms": {
     "title": "Sales Platforms",
@@ -215,7 +223,8 @@
     "updatingAssociations": "Error updating photo associations",
     "removingPhoto": "Error removing photo association",
     "loadingFile": "Error loading file",
-    "savingFile": "Error saving file"
+    "savingFile": "Error saving file",
+    "settingMainPhoto": "Error setting main photo"
   },
   "interface": {
     "expand": "Expand",

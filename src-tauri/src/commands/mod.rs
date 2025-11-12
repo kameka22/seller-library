@@ -288,6 +288,40 @@ pub async fn delete_photo_db_only(pool: State<'_, SqlitePool>, photo_id: i64) ->
 }
 
 #[tauri::command]
+pub async fn toggle_main_photo(pool: State<'_, SqlitePool>, photo_id: i64) -> Result<(), String> {
+    // Get the photo to find its folder
+    let photo = sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE id = ?")
+        .bind(photo_id)
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let photo = photo.ok_or_else(|| "Photo not found".to_string())?;
+
+    // Start a transaction to ensure atomicity
+    let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+
+    // First, set all photos in the same folder to is_main = false
+    sqlx::query("UPDATE photos SET is_main = 0 WHERE folder_id = ?")
+        .bind(photo.folder_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Then, set the selected photo to is_main = true
+    sqlx::query("UPDATE photos SET is_main = 1 WHERE id = ?")
+        .bind(photo_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Commit the transaction
+    tx.commit().await.map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn delete_folder_recursive(
     pool: State<'_, SqlitePool>,
     request: DeleteFolderRequest,
@@ -605,6 +639,7 @@ pub struct PhotoWithAssociation {
     pub height: Option<i32>,
     pub created_at: String,
     pub association_id: i64,
+    pub display_order: i32,
 }
 
 #[tauri::command]
@@ -613,7 +648,7 @@ pub async fn get_object_photos(
     object_id: i64,
 ) -> Result<Vec<PhotoWithAssociation>, String> {
     sqlx::query_as::<_, PhotoWithAssociation>(
-        "SELECT p.*, op.id as association_id FROM photos p
+        "SELECT p.*, op.id as association_id, op.display_order FROM photos p
          INNER JOIN object_photos op ON p.id = op.photo_id
          WHERE op.object_id = ?
          ORDER BY op.display_order, p.created_at"
@@ -667,6 +702,52 @@ pub async fn dissociate_photo(pool: State<'_, SqlitePool>, id: i64) -> Result<()
     } else {
         Ok(())
     }
+}
+
+#[tauri::command]
+pub async fn set_main_photo_for_object(
+    pool: State<'_, SqlitePool>,
+    object_id: i64,
+    photo_id: i64,
+) -> Result<(), String> {
+    // Start a transaction to ensure atomicity
+    let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+
+    // Get all photos for this object
+    let photos = sqlx::query_as::<_, ObjectPhoto>(
+        "SELECT * FROM object_photos WHERE object_id = ? ORDER BY display_order"
+    )
+        .bind(object_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Set display_order=0 for the selected photo
+    sqlx::query("UPDATE object_photos SET display_order = 0 WHERE object_id = ? AND photo_id = ?")
+        .bind(object_id)
+        .bind(photo_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Increment display_order for all other photos
+    let mut order = 1;
+    for photo in photos {
+        if photo.photo_id != photo_id {
+            sqlx::query("UPDATE object_photos SET display_order = ? WHERE id = ?")
+                .bind(order)
+                .bind(photo.id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+            order += 1;
+        }
+    }
+
+    // Commit the transaction
+    tx.commit().await.map_err(|e| e.to_string())?;
+
+    Ok(())
 }
 
 // ========== TEXT FILES COMMANDS ==========

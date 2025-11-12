@@ -52,6 +52,11 @@ export const photosAPI = {
     return await invoke('delete_photo_db_only', { photoId })
   },
 
+  // Toggle main photo (mark as main and unmark others in same folder)
+  toggleMain: async (photoId) => {
+    return await invoke('toggle_main_photo', { photoId })
+  },
+
   // Supprimer un dossier entier de manière récursive (fichiers + DB)
   deleteFolder: async (folderPath) => {
     return await invoke('delete_folder_recursive', { request: { folder_path: folderPath } })
@@ -75,6 +80,11 @@ export const photosAPI = {
   // Dissocier une photo
   dissociate: async (id) => {
     return await invoke('dissociate_photo', { id })
+  },
+
+  // Définir une photo comme principale pour un objet (display_order=0)
+  setMainForObject: async (objectId, photoId) => {
+    return await invoke('set_main_photo_for_object', { objectId, photoId })
   },
 
   // Sauvegarder une photo éditée

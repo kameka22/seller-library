@@ -60,7 +60,13 @@
     "objectDetails": "Détails de l'objet",
     "addPhoto": "Ajouter une photo",
     "managePhotos": "Gérer les photos",
-    "associatedPhotos": "Photos associées"
+    "associatedPhotos": "Photos associées",
+    "createObject": "Créer un objet",
+    "createObjectFromPhotos": "Créer un objet depuis les photos",
+    "selectedContent": "Contenu sélectionné",
+    "createObjectSuccess": "Objet créé avec succès !",
+    "viewObject": "Voir l'objet",
+    "clickToViewObject": "Cliquer ici pour voir l'objet"
   },
   "categories": {
     "title": "Catégories",
@@ -96,7 +102,9 @@
     "selectedPhotos": "photo(s) sélectionnée(s)",
     "allFolders": "Tous les dossiers",
     "selected": "sélectionnée(s)",
-    "editPhoto": "Éditer la Photo"
+    "editPhoto": "Éditer la Photo",
+    "markAsMain": "Marquer comme photo principale",
+    "unmarkAsMain": "Retirer la photo principale"
   },
   "platforms": {
     "title": "Plateformes de Vente",
@@ -215,7 +223,8 @@
     "updatingAssociations": "Erreur lors de la mise à jour des associations",
     "removingPhoto": "Erreur lors de la suppression de l'association",
     "loadingFile": "Erreur lors du chargement du fichier",
-    "savingFile": "Erreur lors de l'enregistrement du fichier"
+    "savingFile": "Erreur lors de l'enregistrement du fichier",
+    "settingMainPhoto": "Erreur lors de la définition de la photo principale"
   },
   "interface": {
     "expand": "Déplier",

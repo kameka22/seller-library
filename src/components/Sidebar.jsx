@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
 import { settingsAPI } from "../api";
+import packageJson from "../../package.json";
 
 export default function Sidebar({
   activeTab,
@@ -258,7 +259,7 @@ export default function Sidebar({
                 className={`text-xs truncate hover:underline cursor-pointer ${updateAvailable === false ? "text-green-400" : "text-gray-400"}`}
                 title={t("update.clickToCheck")}
               >
-                {t("common.version")} 0.2.1
+                {t("common.version")} {packageJson.version}
               </button>
               {updateAvailable && (
                 <button

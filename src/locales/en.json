@@ -223,7 +223,8 @@
     "updatingAssociations": "Error updating photo associations",
     "removingPhoto": "Error removing photo association",
     "loadingFile": "Error loading file",
-    "savingFile": "Error saving file"
+    "savingFile": "Error saving file",
+    "settingMainPhoto": "Error setting main photo"
   },
   "interface": {
     "expand": "Expand",

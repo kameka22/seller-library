@@ -36,6 +36,7 @@ async fn main() {
             commands::get_object_photos,
             commands::associate_photo,
             commands::dissociate_photo,
+            commands::set_main_photo_for_object,
             commands::list_text_files,
             commands::get_text_file_content,
             commands::save_text_file_content,

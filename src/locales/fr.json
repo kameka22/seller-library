@@ -223,7 +223,8 @@
     "updatingAssociations": "Erreur lors de la mise à jour des associations",
     "removingPhoto": "Erreur lors de la suppression de l'association",
     "loadingFile": "Erreur lors du chargement du fichier",
-    "savingFile": "Erreur lors de l'enregistrement du fichier"
+    "savingFile": "Erreur lors de l'enregistrement du fichier",
+    "settingMainPhoto": "Erreur lors de la définition de la photo principale"
   },
   "interface": {
     "expand": "Déplier",

@@ -82,6 +82,11 @@ export const photosAPI = {
     return await invoke('dissociate_photo', { id })
   },
 
+  // Définir une photo comme principale pour un objet (display_order=0)
+  setMainForObject: async (objectId, photoId) => {
+    return await invoke('set_main_photo_for_object', { objectId, photoId })
+  },
+
   // Sauvegarder une photo éditée
   saveEdited: async (photoId, base64Data, createCopy = false) => {
     return await invoke('save_edited_photo', { photoId, request: { base64_data: base64Data, create_copy: createCopy } })

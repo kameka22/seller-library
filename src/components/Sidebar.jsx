@@ -18,7 +18,8 @@ export default function Sidebar({
     // Function to load user name from localStorage
     const loadUserName = () => {
       const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
-      setUserName(userInfo.firstName || t('interface.user'));
+      const fullName = [userInfo.firstName, userInfo.lastName].filter(Boolean).join(' ');
+      setUserName(fullName || t('interface.user'));
     };
 
     // Load initially

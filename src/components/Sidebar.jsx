@@ -21,13 +21,13 @@ export default function Sidebar({
       try {
         const [firstName, lastName] = await Promise.all([
           settingsAPI.getFirstName(),
-          settingsAPI.getLastName()
+          settingsAPI.getLastName(),
         ]);
-        const fullName = [firstName, lastName].filter(Boolean).join(' ');
-        setUserName(fullName || t('interface.user'));
+        const fullName = [firstName, lastName].filter(Boolean).join(" ");
+        setUserName(fullName || t("interface.user"));
       } catch (error) {
-        console.error('Error loading user name:', error);
-        setUserName(t('interface.user'));
+        console.error("Error loading user name:", error);
+        setUserName(t("interface.user"));
       }
     };
 
@@ -127,7 +127,7 @@ export default function Sidebar({
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="p-2 hover:bg-gray-800 rounded-lg transition-colors ml-auto"
-          title={isCollapsed ? t('interface.expand') : t('interface.collapse')}
+          title={isCollapsed ? t("interface.expand") : t("interface.collapse")}
         >
           <svg
             className={`w-5 h-5 transition-transform ${isCollapsed ? "rotate-180" : ""}`}
@@ -239,7 +239,7 @@ export default function Sidebar({
                 className={`text-xs truncate hover:underline cursor-pointer ${updateAvailable === false ? "text-green-400" : "text-gray-400"}`}
                 title={t("update.clickToCheck")}
               >
-                {t("common.version")} 0.1.4
+                {t("common.version")} 0.2.0
               </button>
               {updateAvailable && (
                 <button

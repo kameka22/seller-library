@@ -36,6 +36,13 @@ CURRENT_VERSION=$(grep -oP '"version":\s*"\K[^"]+' package.json | head -1)
 echo -e "Current version: ${CURRENT_VERSION}"
 echo -e "New version: ${NEW_VERSION}\n"
 
+# Check if version is the same
+if [ "$CURRENT_VERSION" = "$NEW_VERSION" ]; then
+    echo -e "${YELLOW}⚠️  Warning: New version is the same as current version${NC}"
+    echo -e "${YELLOW}   No changes will be made${NC}\n"
+    exit 0
+fi
+
 # Update package.json
 echo "Updating package.json..."
 if [[ "$OSTYPE" == "darwin"* ]]; then

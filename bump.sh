@@ -94,8 +94,31 @@ if [ -f "src-tauri/Cargo.lock" ]; then
     echo "  • src-tauri/Cargo.lock"
 fi
 echo ""
-echo -e "${YELLOW}Next steps:${NC}"
-echo "  1. Review changes: git diff"
-echo "  2. Commit changes: git add -A && git commit -m \"Bump version to ${NEW_VERSION}\""
-echo "  3. Create tag: git tag v${NEW_VERSION}"
-echo "  4. Push: git push && git push --tags"
+
+# Git commit and push
+echo "Committing changes..."
+git add package.json src-tauri/Cargo.toml src-tauri/tauri.conf.json
+if [ -f "src-tauri/Cargo.lock" ]; then
+    git add src-tauri/Cargo.lock
+fi
+
+git commit -m "Bump version to ${NEW_VERSION}"
+
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}✓ Changes committed${NC}"
+
+    echo "Pushing to remote..."
+    git push
+
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✓ Changes pushed to remote${NC}"
+        echo -e "\n${GREEN}🎉 Version ${NEW_VERSION} has been successfully bumped and pushed!${NC}"
+    else
+        echo -e "${RED}✗ Failed to push changes${NC}"
+        echo "Please push manually: git push"
+        exit 1
+    fi
+else
+    echo -e "${RED}✗ Failed to commit changes${NC}"
+    exit 1
+fi

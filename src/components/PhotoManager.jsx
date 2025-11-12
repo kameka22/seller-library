@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
-import { photosAPI, textFilesAPI, objectsAPI } from '../utils/api'
+import { photosAPI, textFilesAPI, objectsAPI } from '../api'
 import PhotoTreeView from './PhotoTreeView'
 import PhotoDetail from './PhotoDetail'
 import TextFileEdit from './TextFileEdit'

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
 import { convertFileSrc } from '@tauri-apps/api/tauri'
-import { objectsAPI, photosAPI } from '../utils/api'
+import { objectsAPI, photosAPI } from '../api'
 import PhotoSelector from './PhotoSelector'
 import { useLanguage } from '../contexts/LanguageContext'
 

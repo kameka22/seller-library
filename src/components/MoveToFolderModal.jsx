@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
-import { photosAPI } from '../utils/api'
+import { photosAPI } from '../api'
 
 export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, folders = [], selectedItems, onFolderCreated, rootFolder, title = 'ui.moveItems', buttonText = 'ui.moveHere' }) {
   const { t } = useLanguage()

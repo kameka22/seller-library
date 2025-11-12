@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { settingsAPI } from '../utils/api'
+import { settingsAPI } from '../api'
 import en from '../locales/en.json'
 import fr from '../locales/fr.json'
 

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { convertFileSrc } from '@tauri-apps/api/tauri'
-import { photosAPI } from '../utils/api'
+import { photosAPI } from '../api'
 import PhotoEditor from './PhotoEditor'
 import { useLanguage } from '../contexts/LanguageContext'
 

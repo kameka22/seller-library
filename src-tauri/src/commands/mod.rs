@@ -1506,8 +1506,33 @@ pub async fn import_photos(
     if let Some(desc) = description {
         if !desc.trim().is_empty() {
             let desc_file = import_folder.join("description.txt");
-            fs::write(&desc_file, desc)
+            fs::write(&desc_file, &desc)
                 .map_err(|e| format!("Failed to write description file: {}", e))?;
+
+            // Add description file to database
+            let desc_file_path = desc_file.to_string_lossy().to_string();
+            let desc_file_size = desc.len() as i64;
+
+            // Check if already exists in database (by file_path)
+            let desc_exists = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM text_files WHERE file_path = ?")
+                .bind(&desc_file_path)
+                .fetch_one(pool.inner())
+                .await
+                .unwrap_or(0);
+
+            if desc_exists == 0 {
+                // Insert into database only if not exists
+                let _ = sqlx::query(
+                    "INSERT INTO text_files (file_path, file_name, folder_id, file_size)
+                     VALUES (?, ?, ?, ?)"
+                )
+                .bind(&desc_file_path)
+                .bind("description.txt")
+                .bind(folder_id)
+                .bind(desc_file_size)
+                .execute(pool.inner())
+                .await;
+            }
         }
     }
 

@@ -409,10 +409,11 @@ export default function PhotoManager() {
         return 0
       })
 
-      // Associate all selected photos to the object in sorted order
-      for (const photo of sortedPhotos) {
+      // Associate all selected photos to the object in sorted order with display_order
+      for (let i = 0; i < sortedPhotos.length; i++) {
+        const photo = sortedPhotos[i]
         try {
-          await photosAPI.associateToObject(photo.id, createdObject.id)
+          await photosAPI.associateToObject(photo.id, createdObject.id, i)
         } catch (err) {
           console.error(`Error associating photo ${photo.id}:`, err)
         }

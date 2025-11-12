@@ -322,7 +322,7 @@
     "addDescriptionInstructions": "Add notes or a description that will be saved with the imported photos.",
     "character": "character",
     "characters": "characters",
-    "descriptionSavedInFile": "This description will be saved in a file named",
+    "descriptionSavedInFile": "This description will be saved in a file named description.txt",
     "reviewAndImport": "Review and import",
     "reviewAndImportInstructions": "Check settings and start importing photos.",
     "device": "Device",

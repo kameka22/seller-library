@@ -322,7 +322,7 @@
     "addDescriptionInstructions": "Ajoutez des notes ou une description qui seront sauvegardées avec les photos importées.",
     "character": "caractère",
     "characters": "caractères",
-    "descriptionSavedInFile": "Cette description sera sauvegardée dans un fichier nommé",
+    "descriptionSavedInFile": "Cette description sera sauvegardée dans un fichier nommé description.txt",
     "reviewAndImport": "Révision et import",
     "reviewAndImportInstructions": "Vérifiez les paramètres et lancez l'import des photos.",
     "device": "Appareil",

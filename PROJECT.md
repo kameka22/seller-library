@@ -2,6 +2,18 @@
 
 Application de bureau (Tauri + React) pour la gestion d'inventaire d'objets à vendre avec organisation de photos et intégration marketplace.
 
+## Version actuelle : 0.2.0
+
+### Changelog
+
+#### Version 0.2.0 (2025-11-12)
+- **Correction** : Le flag `is_main` dans les dossiers détermine maintenant correctement la photo affichée en premier sur les objets (via le paramètre `display_order`)
+- **Correction** : Le fichier `description.txt` créé lors de l'import est maintenant correctement ajouté à la base de données et visible dans l'interface
+- **Amélioration** : Affichage du nom du fichier de description ("description.txt") dans le step 3 du module d'import
+
+#### Version 0.1.4 (2024-11-09)
+- Correction de l'enregistrement des photos : mise à jour de l'interface après écrasement
+
 ---
 
 ## 1. GESTION DES OBJETS

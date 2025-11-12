@@ -1,5 +1,15 @@
 # Seller Library - Implémentation des Fonctions
 
+## Version : 0.2.0
+
+### Changements récents (v0.2.0)
+- **Backend** : `associate_photo` accepte maintenant un paramètre optionnel `display_order` pour définir l'ordre d'affichage des photos sur les objets
+- **Backend** : `import_photos` crée et enregistre automatiquement le fichier `description.txt` dans la base de données (table `text_files`)
+- **Frontend** : `associateToObject` accepte un troisième paramètre optionnel `displayOrder` pour contrôler l'ordre d'affichage
+- **Frontend** : Les photos flaggées `is_main` dans les dossiers sont maintenant correctement associées avec `display_order=0` lors de la création d'objets
+
+---
+
 ## ⚠️ FONCTIONS NON UTILISÉES
 
 **Aucune fonction non utilisée détectée** - Toutes les fonctions du backend et frontend sont utilisées dans l'application.
@@ -55,7 +65,7 @@
 | `delete_folder_recursive_db_only` | Supprime un dossier de la DB uniquement |
 | `save_edited_photo` | Sauvegarde une photo éditée (écrase ou copie) |
 | `get_object_photos` | Récupère les photos associées à un objet |
-| `associate_photo` | Associe une photo à un objet |
+| `associate_photo` | Associe une photo à un objet avec display_order optionnel |
 | `dissociate_photo` | Retire l'association photo-objet |
 | `set_main_photo_for_object` | Définit la photo principale d'un objet (display_order=0) |
 | `scan_directory_recursive` | (privé) Scanne récursivement pour photos/textes |
@@ -96,7 +106,7 @@
 |----------|------|
 | `list_volumes` | Liste les volumes/disques externes |
 | `scan_volume_for_photos` | Scanne un volume pour les photos, retourne aperçu |
-| `import_photos` | Importe des photos de source vers destination |
+| `import_photos` | Importe des photos de source vers destination et crée description.txt en DB |
 | `is_photo_file` | (privé) Vérifie si le fichier est une photo |
 | `scan_for_photos_recursive` | (privé) Scanne récursivement pour photos |
 
@@ -172,7 +182,7 @@
 | `deleteFolder(folderPath)` | Supprime un dossier |
 | `deleteFolderDbOnly(folderPath)` | Supprime dossier de la DB uniquement |
 | `getForObject(objectId)` | Récupère les photos d'un objet |
-| `associateToObject(photoId, objectId)` | Associe photo à objet |
+| `associateToObject(photoId, objectId, displayOrder)` | Associe photo à objet avec ordre d'affichage optionnel |
 | `dissociate(id)` | Dissocie une photo |
 | `setMainForObject(objectId, photoId)` | Définit photo principale d'objet |
 | `saveEdited(photoId, base64Data, createCopy)` | Sauvegarde photo éditée |

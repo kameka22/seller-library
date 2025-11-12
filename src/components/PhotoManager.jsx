@@ -313,6 +313,11 @@ export default function PhotoManager() {
     setCurrentFolderId(folderId)
   }
 
+  const addFolderToState = (newFolder) => {
+    // Add the new folder to the state without reloading everything
+    setFolders(prevFolders => [...prevFolders, newFolder])
+  }
+
   const confirmMove = async (destinationPath) => {
     const movingFolders = selectedItems
       .filter(id => id.startsWith('folder-'))
@@ -821,7 +826,7 @@ export default function PhotoManager() {
         photos={photos}
         folders={folders}
         selectedItems={selectedItems}
-        onFolderCreated={loadPhotos}
+        onFolderCreated={addFolderToState}
         rootFolder={rootFolder}
       />
 
@@ -833,7 +838,7 @@ export default function PhotoManager() {
         photos={photos}
         folders={folders}
         selectedItems={selectedItems}
-        onFolderCreated={loadPhotos}
+        onFolderCreated={addFolderToState}
         rootFolder={rootFolder}
         title="ui.copyItems"
         buttonText="ui.copyHere"

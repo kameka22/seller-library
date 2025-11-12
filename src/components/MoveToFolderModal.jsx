@@ -7,6 +7,12 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
   const [currentFolderId, setCurrentFolderId] = useState(null) // null = root
   const [isCreatingFolder, setIsCreatingFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
+  const [localFolders, setLocalFolders] = useState([])
+
+  // Sync localFolders with folders prop
+  useEffect(() => {
+    setLocalFolders(folders)
+  }, [folders])
 
   // Reset state when modal closes
   useEffect(() => {
@@ -20,7 +26,7 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
   // Build folder map with parent-child relationships
   const folderMap = useMemo(() => {
     const map = new Map()
-    folders.forEach(folder => {
+    localFolders.forEach(folder => {
       map.set(folder.id, {
         ...folder,
         children: []
@@ -28,7 +34,7 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
     })
 
     // Build parent-child relationships
-    folders.forEach(folder => {
+    localFolders.forEach(folder => {
       if (folder.parent_id !== null && map.has(folder.parent_id)) {
         const parent = map.get(folder.parent_id)
         parent.children.push(folder.id)
@@ -36,15 +42,15 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
     })
 
     return map
-  }, [folders])
+  }, [localFolders])
 
   // Get root folders (folders with parent_id = null)
   const rootFolders = useMemo(() => {
-    return folders
+    return localFolders
       .filter(f => f.parent_id === null)
       .map(f => folderMap.get(f.id))
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [folders, folderMap])
+  }, [localFolders, folderMap])
 
   // Get selected folder paths for filtering
   const selectedFolderPaths = useMemo(() => {
@@ -131,14 +137,18 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
 
       const newFolderPath = parentPath ? `${parentPath}/${newFolderName.trim()}` : `/${newFolderName.trim()}`
 
-      await photosAPI.createFolder(newFolderPath)
+      // Create folder and get the created folder data
+      const createdFolder = await photosAPI.createFolder(newFolderPath)
 
       setIsCreatingFolder(false)
       setNewFolderName('')
 
-      // Reload folders - the new folder will appear in the current directory
+      // Add the new folder to local state immediately (optimistic update)
+      setLocalFolders(prev => [...prev, createdFolder])
+
+      // Notify parent component to update its state too
       if (onFolderCreated) {
-        await onFolderCreated()
+        onFolderCreated(createdFolder)
       }
     } catch (err) {
       console.error('Error creating folder:', err)
@@ -178,7 +188,7 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
     // Check if folders are already in current folder (parent_id matches)
     for (const folderId of movingFolders) {
       const folderPath = folderId.replace('folder-', '')
-      const folder = folders.find(f => f.path === folderPath)
+      const folder = localFolders.find(f => f.path === folderPath)
       if (folder && folder.parent_id === currentFolderId) {
         // At least one folder is already in this folder
         return false

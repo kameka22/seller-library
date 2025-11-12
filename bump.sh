@@ -32,7 +32,7 @@ fi
 echo -e "${YELLOW}Bumping version to ${NEW_VERSION}...${NC}\n"
 
 # Get current version from package.json
-CURRENT_VERSION=$(grep -oP '"version":\s*"\K[^"]+' package.json | head -1)
+CURRENT_VERSION=$(sed -n 's/.*"version": "\([^"]*\)".*/\1/p' package.json | head -1)
 echo -e "Current version: ${CURRENT_VERSION}"
 echo -e "New version: ${NEW_VERSION}\n"
 

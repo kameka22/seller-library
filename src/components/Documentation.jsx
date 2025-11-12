@@ -143,6 +143,10 @@ export default function Documentation() {
                 <p className="font-medium text-green-900">{t('documentation.importOptionATitle')}</p>
                 <p className="text-green-800 text-sm mt-1">{t('documentation.importOptionADetail')}</p>
               </div>
+              <div className="ml-6 mt-2 bg-blue-50 border border-blue-200 rounded p-3">
+                <p className="font-medium text-blue-900">{t('documentation.importOptionBTitle')}</p>
+                <p className="text-blue-800 text-sm mt-1">{t('documentation.importOptionBDetail')}</p>
+              </div>
             </li>
             <li>
               <span className="font-medium">{t('documentation.importStep6Title')}</span>
@@ -151,6 +155,10 @@ export default function Documentation() {
                 <p className="font-medium text-green-900">{t('documentation.importDestinationOptionATitle')}</p>
                 <p className="text-green-800 text-sm mt-1">{t('documentation.importDestinationOptionADetail')}</p>
               </div>
+              <div className="ml-6 mt-2 bg-blue-50 border border-blue-200 rounded p-3">
+                <p className="font-medium text-blue-900">{t('documentation.importDestinationOptionBTitle')}</p>
+                <p className="text-blue-800 text-sm mt-1">{t('documentation.importDestinationOptionBDetail')}</p>
+              </div>
             </li>
             <li>
               <span className="font-medium">{t('documentation.importStep7Title')}</span>
@@ -158,6 +166,10 @@ export default function Documentation() {
               <div className="ml-6 mt-2 bg-green-50 border border-green-200 rounded p-3">
                 <p className="font-medium text-green-900">{t('documentation.importFormatOptionATitle')}</p>
                 <p className="text-green-800 text-sm mt-1">{t('documentation.importFormatOptionADetail')}</p>
+              </div>
+              <div className="ml-6 mt-2 bg-blue-50 border border-blue-200 rounded p-3">
+                <p className="font-medium text-blue-900">{t('documentation.importFormatOptionBTitle')}</p>
+                <p className="text-blue-800 text-sm mt-1">{t('documentation.importFormatOptionBDetail')}</p>
               </div>
             </li>
             <li>

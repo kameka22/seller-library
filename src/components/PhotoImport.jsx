@@ -469,20 +469,6 @@ export default function PhotoImport() {
                       </button>
                     </div>
                   </div>
-
-                  {/* Preview images (show only in 'all' mode or if no selection made yet) */}
-                  {importMode === 'all' && previewImages.length > 0 && (
-                    <div>
-                      <p className="text-sm text-gray-600 mb-2">{t('photoImport.preview')}</p>
-                      <div className="grid grid-cols-4 gap-2">
-                        {previewImages.map((img, index) => (
-                          <div key={index} className="bg-gray-200 rounded overflow-hidden flex items-center justify-center" style={{maxHeight: '200px'}}>
-                            <img src={img} alt={`Preview ${index + 1}`} className="max-h-[200px] w-auto object-contain" />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* Photo Selection Grid */}

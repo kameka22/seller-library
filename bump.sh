@@ -95,6 +95,24 @@ if [ -f "src-tauri/Cargo.lock" ]; then
 fi
 echo ""
 
+# Verify that the three main files were actually modified
+echo "Verifying changes..."
+PACKAGE_VERSION=$(sed -n 's/.*"version": "\([^"]*\)".*/\1/p' package.json | head -1)
+CARGO_VERSION=$(grep -m 1 '^version = ' src-tauri/Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+TAURI_VERSION=$(sed -n 's/.*"version": "\([^"]*\)".*/\1/p' src-tauri/tauri.conf.json | head -1)
+
+if [ "$PACKAGE_VERSION" != "$NEW_VERSION" ] || [ "$CARGO_VERSION" != "$NEW_VERSION" ] || [ "$TAURI_VERSION" != "$NEW_VERSION" ]; then
+    echo -e "${RED}✗ Error: Version mismatch detected!${NC}"
+    echo "  package.json: $PACKAGE_VERSION"
+    echo "  Cargo.toml: $CARGO_VERSION"
+    echo "  tauri.conf.json: $TAURI_VERSION"
+    echo "  Expected: $NEW_VERSION"
+    echo ""
+    echo "Please check the files and try again."
+    exit 1
+fi
+echo -e "${GREEN}✓ All files correctly updated to version ${NEW_VERSION}${NC}\n"
+
 # Git commit and push
 echo "Committing changes..."
 git add package.json src-tauri/Cargo.toml src-tauri/tauri.conf.json

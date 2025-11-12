@@ -1,15 +1,15 @@
 {
-  "version": "0.2.1",
-  "notes": "Version 0.2.1 - Nouvelles fonctionnalités d'import\n\n• Ajout de la sélection de photos dans le module d'import : vous pouvez maintenant choisir les photos à importer au lieu d'importer tout\n• Affichage d'une grille de sélection des photos avec aperçu\n• Modale de confirmation pour l'affichage de nombreuses photos (> 20)\n• Masquage de l'icône drapeau (photo principale) dans le dossier IMPORTS de la galerie\n• Retrait de l'aperçu des 4 photos en mode 'Import tout'",
-  "pub_date": "2025-11-12T15:00:00Z",
+  "version": "0.2.2",
+  "notes": "Version 0.2.2 - Ajout du bouton de creation de fichier texte\nAjout de la documentation'",
+  "pub_date": "2025-11-12T21:00:00Z",
   "platforms": {
     "darwin-aarch64": {
       "signature": "",
-      "url": "https://github.com/kameka22/seller-library/releases/download/0.2.1/seller-library_0.2.1_aarch64.app.tar.gz"
+      "url": "https://github.com/kameka22/seller-library/releases/download/0.2.2/seller-library_0.2.2_aarch64.app.tar.gz"
     },
     "darwin-x86_64": {
       "signature": "",
-      "url": "https://github.com/kameka22/seller-library/releases/download/0.2.1/seller-library_0.2.1_x64.app.tar.gz"
+      "url": "https://github.com/kameka22/seller-library/releases/download/0.2.2/seller-library_0.2.2_x64.app.tar.gz"
     }
   }
 }

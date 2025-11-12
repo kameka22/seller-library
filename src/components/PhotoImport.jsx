@@ -3,7 +3,7 @@ import { open } from '@tauri-apps/api/dialog'
 import { invoke } from '@tauri-apps/api/tauri'
 import Stepper from './Stepper'
 import { useLanguage } from '../contexts/LanguageContext'
-import { photosAPI } from '../utils/api'
+import { photosAPI } from '../api'
 
 const getSteps = (t) => [
   { id: 1, label: t('photoImport.device') },

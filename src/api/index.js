@@ -1,0 +1,5 @@
+export { objectsAPI } from './objects'
+export { photosAPI } from './photos'
+export { textFilesAPI } from './textFiles'
+export { settingsAPI } from './settings'
+export { platformsAPI } from './platforms'

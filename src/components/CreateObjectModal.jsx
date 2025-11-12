@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { textFilesAPI } from '../utils/api'
+import { textFilesAPI } from '../api'
 import { useLanguage } from '../contexts/LanguageContext'
 
 export default function CreateObjectModal({

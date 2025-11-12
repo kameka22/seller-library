@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { open } from '@tauri-apps/api/dialog'
 import { useLanguage } from '../contexts/LanguageContext'
-import { settingsAPI, photosAPI } from '../utils/api'
+import { settingsAPI, photosAPI } from '../api'
 
 export default function UserSettings() {
   const { t, language, changeLanguage } = useLanguage()

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { objectsAPI } from '../utils/api'
+import { objectsAPI } from '../api'
 import { invoke } from '@tauri-apps/api/tauri'
 import ObjectCard from './ObjectCard'
 import ObjectDetail from './ObjectDetail'

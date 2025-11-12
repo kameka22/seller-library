@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext'
-import { settingsAPI } from './utils/api'
+import { settingsAPI } from './api'
 import Sidebar from './components/Sidebar'
 import ObjectList from './components/ObjectList'
 import PhotoManager from './components/PhotoManager'

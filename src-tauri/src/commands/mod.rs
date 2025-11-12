@@ -1624,6 +1624,8 @@ pub struct MoveItemsRequest {
     pub text_file_ids: Vec<i64>,
     pub folder_paths: Vec<String>,
     pub destination_path: String,
+    #[serde(default)]
+    pub delete_source_folder: bool,
 }
 
 #[derive(Serialize)]
@@ -1646,6 +1648,23 @@ pub async fn move_photos_and_folders(
 
     let mut moved_count = 0;
     let mut errors = Vec::new();
+
+    // Track source folders to delete (if delete_source_folder is true)
+    let mut source_folder_ids: std::collections::HashSet<i64> = std::collections::HashSet::new();
+
+    if request.delete_source_folder {
+        // Collect source folder IDs from photos
+        for photo_id in &request.photo_ids {
+            if let Ok(Some(photo)) = sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE id = ?")
+                .bind(photo_id)
+                .fetch_optional(pool.inner())
+                .await {
+                if let Some(folder_id) = photo.folder_id {
+                    source_folder_ids.insert(folder_id);
+                }
+            }
+        }
+    }
 
     // Move individual photos
     for photo_id in request.photo_ids {
@@ -1943,6 +1962,51 @@ pub async fn move_photos_and_folders(
                 }
             }
             Err(e) => errors.push(format!("Failed to move folder {}: {}", folder_path, e)),
+        }
+    }
+
+    // Delete source folders if requested
+    if request.delete_source_folder && !source_folder_ids.is_empty() {
+        for folder_id in source_folder_ids {
+            // Get folder path before deletion
+            let folder_result = sqlx::query_as::<_, Folder>("SELECT * FROM folders WHERE id = ?")
+                .bind(folder_id)
+                .fetch_optional(pool.inner())
+                .await;
+
+            if let Ok(Some(folder)) = folder_result {
+                // Check if folder is now empty (no photos left)
+                let photo_count: (i64,) = sqlx::query_as(
+                    "SELECT COUNT(*) FROM photos WHERE folder_id = ?"
+                )
+                .bind(folder_id)
+                .fetch_one(pool.inner())
+                .await
+                .unwrap_or((0,));
+
+                if photo_count.0 == 0 {
+                    // Delete physical folder if it exists and is empty
+                    let folder_path = Path::new(&folder.path);
+                    if folder_path.exists() {
+                        match fs::remove_dir(folder_path) {
+                            Ok(_) => {
+                                // Delete from database
+                                match sqlx::query("DELETE FROM folders WHERE id = ?")
+                                    .bind(folder_id)
+                                    .execute(pool.inner())
+                                    .await {
+                                    Ok(_) => {},
+                                    Err(e) => errors.push(format!("Failed to delete folder from DB: {}", e)),
+                                }
+                            }
+                            Err(e) => {
+                                // If we can't delete because it's not empty or other error, just log it
+                                errors.push(format!("Could not delete source folder {}: {}", folder.path, e));
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

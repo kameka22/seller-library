@@ -8,6 +8,10 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
   const [isCreatingFolder, setIsCreatingFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
   const [localFolders, setLocalFolders] = useState([])
+  const [deleteSourceFolder, setDeleteSourceFolder] = useState(false)
+
+  // Check if this is the move modal (not copy modal)
+  const isMoveModal = title === 'ui.moveItems'
 
   // Sync localFolders with folders prop
   useEffect(() => {
@@ -20,6 +24,7 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
       setCurrentFolderId(null)
       setIsCreatingFolder(false)
       setNewFolderName('')
+      setDeleteSourceFolder(false)
     }
   }, [isOpen])
 
@@ -161,7 +166,7 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
       return
     }
 
-    onConfirm(currentFolder.path)
+    onConfirm(currentFolder.path, deleteSourceFolder)
     onClose()
   }
 
@@ -330,15 +335,45 @@ export default function MoveToFolderModal({ isOpen, onClose, onConfirm, photos, 
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t bg-gray-50 flex justify-between items-center">
-          <div className="text-sm text-gray-600">
-            {currentFolderId !== null && (
-              <span>
-                <span className="font-medium">{t('ui.destination')}:</span> {currentFolder.path}
-              </span>
-            )}
+        <div className="px-6 py-4 border-t bg-gray-50">
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-600">
+              {currentFolderId !== null && (
+                <span>
+                  <span className="font-medium">{t('ui.destination')}:</span> {currentFolder.path}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex gap-3">
+
+          {/* Delete Source Folder Option (only for move modal) */}
+          {isMoveModal && (
+            <div className="mb-4 flex items-center">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={deleteSourceFolder}
+                  onClick={() => setDeleteSourceFolder(!deleteSourceFolder)}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                    deleteSourceFolder ? 'bg-red-600' : 'bg-gray-200'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      deleteSourceFolder ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+                <span className="text-sm font-medium text-gray-700">
+                  {t('ui.deleteSourceFolder') || 'Supprimer le dossier source des photos'}
+                </span>
+              </label>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3">
             <button
               onClick={onClose}
               className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"

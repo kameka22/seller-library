@@ -318,7 +318,7 @@ export default function PhotoManager() {
     setFolders(prevFolders => [...prevFolders, newFolder])
   }
 
-  const confirmMove = async (destinationPath) => {
+  const confirmMove = async (destinationPath, deleteSourceFolder = false) => {
     const movingFolders = selectedItems
       .filter(id => id.startsWith('folder-'))
       .map(id => id.replace('folder-', '')) // Path is already absolute
@@ -335,7 +335,7 @@ export default function PhotoManager() {
       setScanning(true)
       setError(null)
 
-      const result = await photosAPI.moveItems(photoIds, textFileIds, movingFolders, destinationPath)
+      const result = await photosAPI.moveItems(photoIds, textFileIds, movingFolders, destinationPath, deleteSourceFolder)
 
       // Close modal first
       setShowMoveModal(false)

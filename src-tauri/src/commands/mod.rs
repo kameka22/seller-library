@@ -288,6 +288,40 @@ pub async fn delete_photo_db_only(pool: State<'_, SqlitePool>, photo_id: i64) ->
 }
 
 #[tauri::command]
+pub async fn toggle_main_photo(pool: State<'_, SqlitePool>, photo_id: i64) -> Result<(), String> {
+    // Get the photo to find its folder
+    let photo = sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE id = ?")
+        .bind(photo_id)
+        .fetch_optional(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let photo = photo.ok_or_else(|| "Photo not found".to_string())?;
+
+    // Start a transaction to ensure atomicity
+    let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+
+    // First, set all photos in the same folder to is_main = false
+    sqlx::query("UPDATE photos SET is_main = 0 WHERE folder_id = ?")
+        .bind(photo.folder_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Then, set the selected photo to is_main = true
+    sqlx::query("UPDATE photos SET is_main = 1 WHERE id = ?")
+        .bind(photo_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Commit the transaction
+    tx.commit().await.map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn delete_folder_recursive(
     pool: State<'_, SqlitePool>,
     request: DeleteFolderRequest,

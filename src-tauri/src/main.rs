@@ -29,6 +29,7 @@ async fn main() {
             commands::scan_photos,
             commands::delete_photo,
             commands::delete_photo_db_only,
+            commands::toggle_main_photo,
             commands::delete_folder_recursive,
             commands::delete_folder_recursive_db_only,
             commands::save_edited_photo,

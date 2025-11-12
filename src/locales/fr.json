@@ -102,7 +102,9 @@
     "selectedPhotos": "photo(s) sélectionnée(s)",
     "allFolders": "Tous les dossiers",
     "selected": "sélectionnée(s)",
-    "editPhoto": "Éditer la Photo"
+    "editPhoto": "Éditer la Photo",
+    "markAsMain": "Marquer comme photo principale",
+    "unmarkAsMain": "Retirer la photo principale"
   },
   "platforms": {
     "title": "Plateformes de Vente",

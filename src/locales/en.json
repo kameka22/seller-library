@@ -102,7 +102,9 @@
     "selectedPhotos": "selected photo(s)",
     "allFolders": "All folders",
     "selected": "selected",
-    "editPhoto": "Edit Photo"
+    "editPhoto": "Edit Photo",
+    "markAsMain": "Mark as main photo",
+    "unmarkAsMain": "Unmark as main photo"
   },
   "platforms": {
     "title": "Sales Platforms",

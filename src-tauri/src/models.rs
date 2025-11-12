@@ -55,6 +55,7 @@ pub struct Photo {
     pub width: Option<i32>,
     pub height: Option<i32>,
     pub folder_id: Option<i64>,
+    pub is_main: bool,
     pub created_at: String,
 }
 

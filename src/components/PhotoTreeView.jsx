@@ -24,6 +24,7 @@ export default function PhotoTreeView({
   onDeleteItems,
   onMoveItems,
   onCopyItems,
+  onToggleMain,            // Callback to toggle main photo status
   rootFolder = null,       // Root folder path to display real name
   allFolders = [],         // All folders for navigation and counts
   allPhotos = [],          // All photos for counting (not filtered)
@@ -452,6 +453,34 @@ export default function PhotoTreeView({
                         className="w-5 h-5 rounded cursor-pointer"
                       />
                     </div>
+                  )}
+
+                  {/* Main photo flag */}
+                  {onToggleMain && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onToggleMain(photo.id)
+                      }}
+                      className="absolute top-2 right-2 z-10 p-1 rounded-full bg-white/90 hover:bg-white shadow-md transition-all hover:scale-110"
+                      title={photo.is_main ? t('photos.unmarkAsMain') : t('photos.markAsMain')}
+                    >
+                      <svg
+                        className={`w-5 h-5 transition-colors ${
+                          photo.is_main ? 'text-amber-500 fill-current' : 'text-gray-400'
+                        }`}
+                        fill={photo.is_main ? 'currentColor' : 'none'}
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"
+                        />
+                      </svg>
+                    </button>
                   )}
 
                   {/* Info overlay */}

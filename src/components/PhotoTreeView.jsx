@@ -626,6 +626,7 @@ export default function PhotoTreeView({
       </Menu>
 
       <Menu id={FOLDER_MENU_ID}>
+        {/* Temporarily disabled - will be reactivated later
         <Item onClick={handleFolderCopy}>
           <div className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -642,6 +643,7 @@ export default function PhotoTreeView({
             <span>{t('common.move')}</span>
           </div>
         </Item>
+        */}
         <Item onClick={handleFolderDelete}>
           <div className="flex items-center gap-2 text-red-600">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

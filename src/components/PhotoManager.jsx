@@ -806,13 +806,6 @@ export default function PhotoManager() {
         </div>
       </div>
 
-      {/* Error Message */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-          {error}
-        </div>
-      )}
-
       {/* Photo Tree View */}
       <div className="bg-white rounded-lg shadow p-6">
         <PhotoTreeView

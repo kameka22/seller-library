@@ -541,11 +541,6 @@ export default function PhotoTreeView({
                     <p className="text-sm font-medium text-gray-900 truncate text-center w-full px-2" title={textFile.file_name}>
                       {textFile.file_name}
                     </p>
-                    {textFile.file_size && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        {(textFile.file_size / 1024).toFixed(1)} KB
-                      </p>
-                    )}
                   </div>
                 </div>
               )

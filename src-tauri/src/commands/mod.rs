@@ -1126,9 +1126,9 @@ pub async fn create_category(
         .map_err(|e| e.to_string())?;
 
     if let Some(root_path) = root_folder {
-        // Find the "categories" folder in database
+        // Find the "CATEGORIES" folder in database
         let categories_folder = sqlx::query_as::<_, Folder>(
-            "SELECT * FROM folders WHERE name = 'categories' AND parent_id IS NULL"
+            "SELECT * FROM folders WHERE name = 'CATEGORIES' AND parent_id IS NULL"
         )
             .fetch_optional(pool.inner())
             .await
@@ -1137,7 +1137,7 @@ pub async fn create_category(
         if let Some(categories_folder) = categories_folder {
             // Create physical folder for the category
             let category_folder_path = Path::new(&root_path)
-                .join("categories")
+                .join("CATEGORIES")
                 .join(&category.name);
 
             // Create the physical folder if it doesn't exist
@@ -1191,7 +1191,7 @@ pub async fn delete_category(pool: State<'_, SqlitePool>, id: i64) -> Result<(),
     if let Some(root_path) = root_folder {
         // Build the category folder path
         let category_folder_path = Path::new(&root_path)
-            .join("categories")
+            .join("CATEGORIES")
             .join(&category.name);
 
         // If the physical folder exists, delete it recursively
@@ -2759,18 +2759,18 @@ pub async fn set_root_folder(pool: State<'_, SqlitePool>, path: String) -> Resul
     .await
     .map_err(|e| e.to_string())?;
 
-    // Create default folders "categories" and "imports" if they don't exist
-    let categories_path = Path::new(&path).join("categories");
-    let imports_path = Path::new(&path).join("imports");
+    // Create default folders "CATEGORIES" and "IMPORTS" if they don't exist
+    let categories_path = Path::new(&path).join("CATEGORIES");
+    let imports_path = Path::new(&path).join("IMPORTS");
 
     if !categories_path.exists() {
         fs::create_dir_all(&categories_path)
-            .map_err(|e| format!("Failed to create 'categories' folder: {}", e))?;
+            .map_err(|e| format!("Failed to create 'CATEGORIES' folder: {}", e))?;
     }
 
     if !imports_path.exists() {
         fs::create_dir_all(&imports_path)
-            .map_err(|e| format!("Failed to create 'imports' folder: {}", e))?;
+            .map_err(|e| format!("Failed to create 'IMPORTS' folder: {}", e))?;
     }
 
     // Scan and create all folders in the root path

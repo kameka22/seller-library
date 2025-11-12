@@ -29,20 +29,6 @@ export default function ObjectList() {
     loadCategories()
   }, [])
 
-  // Check for pending object to view from localStorage
-  useEffect(() => {
-    if (objects.length > 0) {
-      const pendingObjectId = localStorage.getItem('pendingObjectToView')
-      if (pendingObjectId) {
-        const objectToView = objects.find(obj => obj.id === parseInt(pendingObjectId))
-        if (objectToView) {
-          setSelectedObject(objectToView)
-          localStorage.removeItem('pendingObjectToView')
-        }
-      }
-    }
-  }, [objects])
-
   const loadObjects = async () => {
     try {
       setLoading(true)

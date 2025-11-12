@@ -259,6 +259,17 @@ export default function PhotoManager() {
     }
   }
 
+  const handleToggleMain = async (photoId) => {
+    try {
+      await photosAPI.toggleMain(photoId)
+      // Reload photos to update the is_main status
+      await loadPhotos()
+    } catch (err) {
+      console.error('Error toggling main photo:', err)
+      setError(t('photoManager.toggleMainError') || 'Error toggling main photo')
+    }
+  }
+
   const handleEditPhoto = (photo) => {
     setEditingPhoto(photo)
   }
@@ -372,17 +383,26 @@ export default function PhotoManager() {
       // Create the object
       const createdObject = await objectsAPI.create(objectData)
 
-      // Get selected photo IDs
-      const photoIds = selectedItems
+      // Get selected photos with full data to access is_main field
+      const selectedPhotoIds = selectedItems
         .filter(id => id.startsWith('photo-'))
         .map(id => parseInt(id.replace('photo-', '')))
 
-      // Associate all selected photos to the object
-      for (const photoId of photoIds) {
+      const selectedPhotos = photos.filter(p => selectedPhotoIds.includes(p.id))
+
+      // Sort photos: main photo first, then others
+      const sortedPhotos = selectedPhotos.sort((a, b) => {
+        if (a.is_main && !b.is_main) return -1
+        if (!a.is_main && b.is_main) return 1
+        return 0
+      })
+
+      // Associate all selected photos to the object in sorted order
+      for (const photo of sortedPhotos) {
         try {
-          await photosAPI.associateToObject(photoId, createdObject.id)
+          await photosAPI.associateToObject(photo.id, createdObject.id)
         } catch (err) {
-          console.error(`Error associating photo ${photoId}:`, err)
+          console.error(`Error associating photo ${photo.id}:`, err)
         }
       }
 
@@ -690,6 +710,7 @@ export default function PhotoManager() {
           onDeleteItems={handleDeleteItems}
           onMoveItems={handleMoveItems}
           onCopyItems={handleCopyItems}
+          onToggleMain={handleToggleMain}
           rootFolder={rootFolder}
           allFolders={folders}
           allPhotos={photos}

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { open } from '@tauri-apps/api/dialog'
 import { invoke } from '@tauri-apps/api/tauri'
+import { convertFileSrc } from '@tauri-apps/api/tauri'
 import Stepper from './Stepper'
+import ConfirmModal from './ConfirmModal'
 import { useLanguage } from '../contexts/LanguageContext'
 import { photosAPI } from '../api'
 
@@ -24,6 +26,12 @@ export default function PhotoImport() {
   const [photoURLs, setPhotoURLs] = useState([])
   const [previewImages, setPreviewImages] = useState([])
   const [isScanning, setIsScanning] = useState(false)
+
+  // Photo selection mode
+  const [importMode, setImportMode] = useState('all') // 'all' or 'select'
+  const [selectedPhotos, setSelectedPhotos] = useState([])
+  const [showPhotoSelector, setShowPhotoSelector] = useState(false)
+  const [showManyPhotosWarning, setShowManyPhotosWarning] = useState(false)
 
   // Step 2: Destination
   const [destinationOption, setDestinationOption] = useState('import') // 'import' or 'other'
@@ -75,6 +83,9 @@ export default function PhotoImport() {
     setIsScanning(true)
     setPhotoURLs([])
     setPreviewImages([])
+    setImportMode('all')
+    setSelectedPhotos([])
+    setShowPhotoSelector(false)
 
     try {
       const result = await invoke('scan_volume_for_photos', { volumePath: volume.path })
@@ -99,8 +110,51 @@ export default function PhotoImport() {
     }
   }
 
+  const handleImportModeChange = (mode) => {
+    setImportMode(mode)
+    if (mode === 'all') {
+      setSelectedPhotos([])
+      setShowPhotoSelector(false)
+    } else if (mode === 'select') {
+      // If more than 20 photos, show warning modal
+      if (photoURLs.length > 20) {
+        setShowManyPhotosWarning(true)
+      } else {
+        setShowPhotoSelector(true)
+      }
+    }
+  }
+
+  const handleConfirmShowManyPhotos = () => {
+    setShowManyPhotosWarning(false)
+    setShowPhotoSelector(true)
+  }
+
+  const handlePhotoClick = (photoPath) => {
+    if (selectedPhotos.includes(photoPath)) {
+      setSelectedPhotos(selectedPhotos.filter(p => p !== photoPath))
+    } else {
+      setSelectedPhotos([...selectedPhotos, photoPath])
+    }
+  }
+
+  const handleSelectAllPhotos = () => {
+    setSelectedPhotos([...photoURLs])
+  }
+
+  const handleDeselectAllPhotos = () => {
+    setSelectedPhotos([])
+  }
+
   const canProceedFromStep1 = () => {
-    return selectedVolume && photoURLs.length > 0 && !isScanning
+    if (!selectedVolume || photoURLs.length === 0 || isScanning) {
+      return false
+    }
+    // If in select mode, at least one photo must be selected
+    if (importMode === 'select' && selectedPhotos.length === 0) {
+      return false
+    }
+    return true
   }
 
   const canProceedFromStep2 = () => {
@@ -147,8 +201,11 @@ export default function PhotoImport() {
       // Use import folder if selected, otherwise use custom destination
       const finalDestination = destinationOption === 'import' ? importFolder : destinationFolder
 
+      // Use selected photos if in select mode, otherwise use all photos
+      const photosToImport = importMode === 'select' ? selectedPhotos : photoURLs
+
       const result = await invoke('import_photos', {
-        photos: photoURLs,
+        photos: photosToImport,
         destination: finalDestination,
         folderFormat: folderFormatOption,
         customFolderName: folderFormatOption === 'custom' ? customFolderName : null,
@@ -173,6 +230,9 @@ export default function PhotoImport() {
       setCustomFolderName('')
       setPhotoDescription('')
       setDeleteAfterImport(false)
+      setImportMode('all')
+      setSelectedPhotos([])
+      setShowPhotoSelector(false)
 
       // Show success message at step 1
       setImportedCount(importCount)
@@ -330,21 +390,152 @@ export default function PhotoImport() {
               </div>
             )}
 
-            {/* Photo Preview */}
+            {/* Photo Preview and Selection */}
             {selectedVolume && photoURLs.length > 0 && !isScanning && (
-              <div className="bg-blue-50 rounded-lg p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    {photoURLs.length} {t('photoImport.photosDetected')}
-                  </h3>
+              <div className="space-y-4">
+                {/* Photo count and import mode selection */}
+                <div className="bg-blue-50 rounded-lg p-6">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">
+                      {t('photoImport.photosDetectedMessage', {
+                        count: photoURLs.length,
+                        plural: photoURLs.length > 1 ? 's' : ''
+                      })}
+                    </h3>
+
+                    {/* Import mode options */}
+                    <div className="space-y-3">
+                      {/* Option 1: Import all */}
+                      <button
+                        onClick={() => handleImportModeChange('all')}
+                        className={`
+                          w-full p-4 rounded-lg border-2 text-left transition-all
+                          ${importMode === 'all'
+                            ? 'border-blue-500 bg-blue-100'
+                            : 'border-gray-200 hover:border-gray-300 bg-white'
+                          }
+                        `}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`
+                            w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0
+                            ${importMode === 'all' ? 'border-blue-600' : 'border-gray-300'}
+                          `}>
+                            {importMode === 'all' && (
+                              <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900">{t('photoImport.importAll')}</div>
+                            <div className="text-sm text-gray-600">
+                              {t('photoImport.importAllDescription', { count: photoURLs.length })}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+
+                      {/* Option 2: Select photos */}
+                      <button
+                        onClick={() => handleImportModeChange('select')}
+                        className={`
+                          w-full p-4 rounded-lg border-2 text-left transition-all
+                          ${importMode === 'select'
+                            ? 'border-blue-500 bg-blue-100'
+                            : 'border-gray-200 hover:border-gray-300 bg-white'
+                          }
+                        `}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`
+                            w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0
+                            ${importMode === 'select' ? 'border-blue-600' : 'border-gray-300'}
+                          `}>
+                            {importMode === 'select' && (
+                              <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900">{t('photoImport.selectPhotos')}</div>
+                            <div className="text-sm text-gray-600">
+                              {selectedPhotos.length > 0
+                                ? t('photoImport.selectPhotosDescription', {
+                                    count: selectedPhotos.length,
+                                    plural: selectedPhotos.length > 1 ? 's' : ''
+                                  })
+                                : t('photoImport.choosePhotosToImport')}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                {previewImages.length > 0 && (
-                  <div className="grid grid-cols-4 gap-2">
-                    {previewImages.map((img, index) => (
-                      <div key={index} className="bg-gray-200 rounded overflow-hidden flex items-center justify-center" style={{maxHeight: '200px'}}>
-                        <img src={img} alt={`Preview ${index + 1}`} className="max-h-[200px] w-auto object-contain" />
+
+                {/* Photo Selection Grid */}
+                {importMode === 'select' && showPhotoSelector && (
+                  <div className="bg-white rounded-lg border-2 border-blue-200 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-medium text-gray-900">
+                        {t('photoImport.selectPhotosToImport')}
+                      </h3>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleSelectAllPhotos}
+                          className="px-3 py-1 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          {t('photoImport.selectAllPhotos')}
+                        </button>
+                        <button
+                          onClick={handleDeselectAllPhotos}
+                          className="px-3 py-1 text-sm text-gray-600 hover:text-gray-700 font-medium"
+                        >
+                          {t('photoImport.deselectAllPhotos')}
+                        </button>
                       </div>
-                    ))}
+                    </div>
+
+                    <div className="mb-4 text-sm text-gray-600">
+                      {t('photoImport.photosSelectedCount', {
+                        selected: selectedPhotos.length,
+                        total: photoURLs.length,
+                        plural: photoURLs.length > 1 ? 's' : '',
+                        selectedPlural: selectedPhotos.length > 1 ? 's' : ''
+                      })}
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-h-[500px] overflow-y-auto">
+                      {photoURLs.map((photoPath, index) => {
+                        const isSelected = selectedPhotos.includes(photoPath)
+                        return (
+                          <button
+                            key={index}
+                            onClick={() => handlePhotoClick(photoPath)}
+                            className={`
+                              relative aspect-square rounded-lg overflow-hidden border-2 transition-all
+                              ${isSelected
+                                ? 'border-blue-500 ring-2 ring-blue-200 scale-95'
+                                : 'border-gray-200 hover:border-gray-300'
+                              }
+                            `}
+                          >
+                            <img
+                              src={convertFileSrc(photoPath)}
+                              alt={`Photo ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            {isSelected && (
+                              <div className="absolute inset-0 bg-blue-500 bg-opacity-30 flex items-center justify-center">
+                                <div className="bg-blue-600 text-white rounded-full p-1">
+                                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </div>
+                              </div>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
@@ -614,7 +805,10 @@ export default function PhotoImport() {
               </div>
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                 <div className="text-sm text-gray-600 mb-1">{t('ui.photos')}</div>
-                <div className="font-medium text-gray-900">{photoURLs.length}</div>
+                <div className="font-medium text-gray-900">
+                  {importMode === 'select' ? selectedPhotos.length : photoURLs.length}
+                  {importMode === 'select' && <span className="text-sm text-gray-500"> / {photoURLs.length}</span>}
+                </div>
               </div>
             </div>
 
@@ -665,7 +859,7 @@ export default function PhotoImport() {
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                   </svg>
-                  {t('ui.importPhotos', { count: photoURLs.length })}
+                  {t('ui.importPhotos', { count: importMode === 'select' ? selectedPhotos.length : photoURLs.length })}
                 </>
               )}
             </button>
@@ -702,6 +896,20 @@ export default function PhotoImport() {
           </button>
         )}
       </div>
+
+      {/* Modal de confirmation pour l'affichage de nombreuses photos */}
+      <ConfirmModal
+        isOpen={showManyPhotosWarning}
+        onClose={() => {
+          setShowManyPhotosWarning(false)
+          setImportMode('all')
+        }}
+        onConfirm={handleConfirmShowManyPhotos}
+        title={t('photoImport.manyPhotosWarningTitle')}
+        message={t('photoImport.manyPhotosWarningMessage', { count: photoURLs.length })}
+        confirmText={t('photoImport.yesDisplay')}
+        cancelText={t('common.cancel')}
+      />
     </div>
   )
 }

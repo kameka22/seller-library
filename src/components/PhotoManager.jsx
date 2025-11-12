@@ -557,6 +557,40 @@ export default function PhotoManager() {
     return currentFolder || null
   }, [currentFolderId, folders])
 
+  // Check if we are in CATEGORIES folder (to show main photo flag)
+  const isInCategoriesFolder = useMemo(() => {
+    // If at root level, return false (we don't show flag at root)
+    if (currentFolderId === null) return false
+
+    const currentFolder = folders.find(f => f.id === currentFolderId)
+    if (!currentFolder) return false
+
+    // If this is a root-level folder, check if it's CATEGORIES
+    if (currentFolder.parent_id === null) {
+      return currentFolder.name.toLowerCase() === 'categories'
+    }
+
+    // Find the root ancestor by going up the parent chain
+    let ancestorId = currentFolder.parent_id
+    let rootAncestor = null
+
+    while (ancestorId !== null) {
+      const ancestor = folders.find(f => f.id === ancestorId)
+      if (!ancestor) break
+
+      if (ancestor.parent_id === null) {
+        // Found the root ancestor
+        rootAncestor = ancestor
+        break
+      }
+
+      ancestorId = ancestor.parent_id
+    }
+
+    // Check if root ancestor is named "categories"
+    return rootAncestor && rootAncestor.name.toLowerCase() === 'categories'
+  }, [currentFolderId, folders])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -740,7 +774,7 @@ export default function PhotoManager() {
           onDeleteItems={handleDeleteItems}
           onMoveItems={handleMoveItems}
           onCopyItems={handleCopyItems}
-          onToggleMain={handleToggleMain}
+          onToggleMain={isInCategoriesFolder ? handleToggleMain : null}
           rootFolder={rootFolder}
           allFolders={folders}
           allPhotos={photos}

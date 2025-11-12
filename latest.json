@@ -1,15 +1,15 @@
 {
-  "version": "0.2.0",
-  "notes": "Version 0.2.0 - Corrections importantes\n\n• Correction de l'affichage de la photo principale sur les objets : le flag is_main dans les dossiers détermine maintenant correctement la photo affichée en premier\n• Correction du module d'import : le fichier description.txt est maintenant créé et visible dans l'interface\n• Amélioration de l'affichage du nom du fichier de description dans le step 3 de l'import",
-  "pub_date": "2025-11-12T14:41:58Z",
+  "version": "0.2.1",
+  "notes": "Version 0.2.1 - Nouvelles fonctionnalités d'import\n\n• Ajout de la sélection de photos dans le module d'import : vous pouvez maintenant choisir les photos à importer au lieu d'importer tout\n• Affichage d'une grille de sélection des photos avec aperçu\n• Modale de confirmation pour l'affichage de nombreuses photos (> 20)\n• Masquage de l'icône drapeau (photo principale) dans le dossier IMPORTS de la galerie\n• Retrait de l'aperçu des 4 photos en mode 'Import tout'",
+  "pub_date": "2025-11-12T15:00:00Z",
   "platforms": {
     "darwin-aarch64": {
       "signature": "",
-      "url": "https://github.com/kameka22/seller-library/releases/download/0.2.0/seller-library_0.2.0_aarch64.app.tar.gz"
+      "url": "https://github.com/kameka22/seller-library/releases/download/0.2.1/seller-library_0.2.1_aarch64.app.tar.gz"
     },
     "darwin-x86_64": {
       "signature": "",
-      "url": "https://github.com/kameka22/seller-library/releases/download/0.2.0/seller-library_0.2.0_x64.app.tar.gz"
+      "url": "https://github.com/kameka22/seller-library/releases/download/0.2.1/seller-library_0.2.1_x64.app.tar.gz"
     }
   }
 }

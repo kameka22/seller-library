@@ -239,7 +239,7 @@ export default function Sidebar({
                 className={`text-xs truncate hover:underline cursor-pointer ${updateAvailable === false ? "text-green-400" : "text-gray-400"}`}
                 title={t("update.clickToCheck")}
               >
-                {t("common.version")} 0.2.0
+                {t("common.version")} 0.2.1
               </button>
               {updateAvailable && (
                 <button

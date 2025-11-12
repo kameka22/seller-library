@@ -207,7 +207,21 @@
     "photosDetected": "photo(s) détectée(s)",
     "errorsEncountered": "Erreurs rencontrées :",
     "moreErrors": "... et {{count}} autre(s) erreur(s)",
-    "descriptionPlaceholder": "Exemple : « Superbe faience de quimper », « Statue de bronze »..."
+    "descriptionPlaceholder": "Exemple : « Superbe faience de quimper », « Statue de bronze »...",
+    "photosDetectedMessage": "Il y a {{count}} photo{{plural}} détectée{{plural}}.",
+    "importAll": "Import tout (choix par défaut)",
+    "importAllDescription": "Importer toutes les {{count}} photos détectées",
+    "selectPhotos": "Sélectionner les photos",
+    "selectPhotosDescription": "{{count}} photo{{plural}} sélectionnée{{plural}}",
+    "choosePhotosToImport": "Choisir les photos à importer",
+    "preview": "Aperçu :",
+    "selectPhotosToImport": "Sélectionner les photos à importer",
+    "selectAllPhotos": "Tout sélectionner",
+    "deselectAllPhotos": "Tout désélectionner",
+    "photosSelectedCount": "{{selected}} / {{total}} photo{{plural}} sélectionnée{{selectedPlural}}",
+    "manyPhotosWarningTitle": "Affichage de nombreuses photos",
+    "manyPhotosWarningMessage": "Le nombre de photos est conséquent ({{count}} photos). Voulez-vous vraiment les afficher pour la sélection ?",
+    "yesDisplay": "Oui, afficher"
   },
   "errors": {
     "loadingCategories": "Erreur lors du chargement des catégories",

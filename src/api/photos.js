@@ -42,8 +42,12 @@ export const photosAPI = {
   },
 
   // Associer une photo à un objet
-  associateToObject: async (photoId, objectId) => {
-    return await invoke('associate_photo', { objectId, request: { photo_id: photoId } })
+  associateToObject: async (photoId, objectId, displayOrder = null) => {
+    const request = { photo_id: photoId }
+    if (displayOrder !== null) {
+      request.display_order = displayOrder
+    }
+    return await invoke('associate_photo', { objectId, request })
   },
 
   // Dissocier une photo

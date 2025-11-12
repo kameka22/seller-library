@@ -662,6 +662,8 @@ pub async fn get_object_photos(
 #[derive(Deserialize)]
 pub struct AssociatePhotoRequest {
     pub photo_id: i64,
+    #[serde(default)]
+    pub display_order: Option<i32>,
 }
 
 #[tauri::command]
@@ -670,11 +672,14 @@ pub async fn associate_photo(
     object_id: i64,
     request: AssociatePhotoRequest,
 ) -> Result<ObjectPhoto, String> {
+    let display_order = request.display_order.unwrap_or(0);
+
     sqlx::query(
-        "INSERT INTO object_photos (object_id, photo_id) VALUES (?, ?)"
+        "INSERT INTO object_photos (object_id, photo_id, display_order) VALUES (?, ?, ?)"
     )
     .bind(object_id)
     .bind(request.photo_id)
+    .bind(display_order)
     .execute(pool.inner())
     .await
     .map_err(|e| e.to_string())?;

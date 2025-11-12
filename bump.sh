@@ -77,13 +77,13 @@ fi
 echo -e "${GREEN}✓ src-tauri/tauri.conf.json updated${NC}"
 
 # Update Cargo.lock if it exists
-if [ -f "src-tauri/Cargo.lock" ]; then
-    echo "Updating src-tauri/Cargo.lock..."
-    cd src-tauri
-    cargo update -p seller-library --quiet 2>/dev/null || true
-    cd ..
-    echo -e "${GREEN}✓ src-tauri/Cargo.lock updated${NC}"
-fi
+# if [ -f "src-tauri/Cargo.lock" ]; then
+#     echo "Updating src-tauri/Cargo.lock..."
+#     cd src-tauri
+#     cargo update -p seller-library --quiet 2>/dev/null || true
+#     cd ..
+#     echo -e "${GREEN}✓ src-tauri/Cargo.lock updated${NC}"
+# fi
 
 echo -e "\n${GREEN}✨ Version successfully bumped to ${NEW_VERSION}!${NC}\n"
 echo "Files updated:"

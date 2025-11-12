@@ -401,6 +401,7 @@
     "unsavedChanges": "Unsaved changes",
     "enterTextContent": "Enter file content...",
     "lastModified": "Last modified",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "deleteSourceFolder": "Delete source folder of photos"
   }
 }

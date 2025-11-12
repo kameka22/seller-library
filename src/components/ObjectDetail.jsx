@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
 import { convertFileSrc } from '@tauri-apps/api/tauri'
-import { objectsAPI } from '../utils/api'
+import { objectsAPI, photosAPI } from '../utils/api'
 import PhotoSelector from './PhotoSelector'
 import { useLanguage } from '../contexts/LanguageContext'
 
@@ -114,7 +114,7 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
 
   const handleToggleMainPhoto = async (photoId) => {
     try {
-      await objectsAPI.setMainForObject(object.id, photoId)
+      await photosAPI.setMainForObject(object.id, photoId)
       await loadAssociatedPhotos()
       if (onPhotoUpdate) {
         onPhotoUpdate()
@@ -124,6 +124,19 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
       alert(t('errors.settingMainPhoto') || 'Error setting main photo')
     }
   }
+
+  // Sort photos and determine which is the main photo (first one with lowest display_order)
+  const sortedPhotos = useMemo(() => {
+    return [...associatedPhotos].sort((a, b) => {
+      const orderA = a.display_order ?? 999
+      const orderB = b.display_order ?? 999
+      if (orderA !== orderB) return orderA - orderB
+      // If same display_order, sort by id to ensure consistent ordering
+      return a.id - b.id
+    })
+  }, [associatedPhotos])
+
+  const mainPhotoId = sortedPhotos.length > 0 ? sortedPhotos[0].id : null
 
   // Get category name if exists
   const categoryName = object.category_id
@@ -201,39 +214,40 @@ export default function ObjectDetail({ object, onClose, onUpdate, onDelete, onDe
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
-                    {associatedPhotos
-                      .sort((a, b) => (a.display_order || 999) - (b.display_order || 999))
-                      .map((photo) => (
-                      <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group">
-                        <img
-                          src={convertFileSrc(photo.file_path)}
-                          alt={photo.file_name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.target.style.display = 'none'
-                            e.target.parentElement.classList.add('bg-gray-100')
-                          }}
-                        />
-                        <button
-                          onClick={() => handleToggleMainPhoto(photo.id)}
-                          className="absolute top-1 left-1 bg-white/90 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white shadow-md"
-                          title={photo.display_order === 0 ? t('photos.unmarkAsMain') : t('photos.markAsMain')}
-                        >
-                          <svg className={`w-4 h-4 ${photo.display_order === 0 ? 'text-amber-500 fill-current' : 'text-gray-400'}`} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleRemovePhoto(photo.id)}
-                          className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
-                          title={t('interface.removePhoto')}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
+                    {sortedPhotos.map((photo) => {
+                      const isMain = photo.id === mainPhotoId
+                      return (
+                        <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group">
+                          <img
+                            src={convertFileSrc(photo.file_path)}
+                            alt={photo.file_name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.style.display = 'none'
+                              e.target.parentElement.classList.add('bg-gray-100')
+                            }}
+                          />
+                          <button
+                            onClick={() => handleToggleMainPhoto(photo.id)}
+                            className="absolute top-1 left-1 bg-white/90 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white shadow-md"
+                            title={isMain ? t('photos.unmarkAsMain') : t('photos.markAsMain')}
+                          >
+                            <svg className={`w-4 h-4 ${isMain ? 'text-amber-500 fill-current' : 'text-gray-400'}`} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleRemovePhoto(photo.id)}
+                            className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
+                            title={t('interface.removePhoto')}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>

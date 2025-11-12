@@ -62,13 +62,14 @@ export const photosAPI = {
   },
 
   // Déplacer des photos, fichiers texte et dossiers vers un nouveau répertoire
-  moveItems: async (photoIds, textFileIds, folderPaths, destinationPath) => {
+  moveItems: async (photoIds, textFileIds, folderPaths, destinationPath, deleteSourceFolder = false) => {
     return await invoke('move_photos_and_folders', {
       request: {
         photo_ids: photoIds,
         text_file_ids: textFileIds,
         folder_paths: folderPaths,
-        destination_path: destinationPath
+        destination_path: destinationPath,
+        delete_source_folder: deleteSourceFolder
       }
     })
   },

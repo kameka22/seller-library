@@ -1126,9 +1126,9 @@ pub async fn create_category(
         .map_err(|e| e.to_string())?;
 
     if let Some(root_path) = root_folder {
-        // Find the "categories" folder in database
+        // Find the "CATEGORIES" folder in database
         let categories_folder = sqlx::query_as::<_, Folder>(
-            "SELECT * FROM folders WHERE name = 'categories' AND parent_id IS NULL"
+            "SELECT * FROM folders WHERE name = 'CATEGORIES' AND parent_id IS NULL"
         )
             .fetch_optional(pool.inner())
             .await
@@ -1137,7 +1137,7 @@ pub async fn create_category(
         if let Some(categories_folder) = categories_folder {
             // Create physical folder for the category
             let category_folder_path = Path::new(&root_path)
-                .join("categories")
+                .join("CATEGORIES")
                 .join(&category.name);
 
             // Create the physical folder if it doesn't exist
@@ -1191,7 +1191,7 @@ pub async fn delete_category(pool: State<'_, SqlitePool>, id: i64) -> Result<(),
     if let Some(root_path) = root_folder {
         // Build the category folder path
         let category_folder_path = Path::new(&root_path)
-            .join("categories")
+            .join("CATEGORIES")
             .join(&category.name);
 
         // If the physical folder exists, delete it recursively
@@ -1624,6 +1624,8 @@ pub struct MoveItemsRequest {
     pub text_file_ids: Vec<i64>,
     pub folder_paths: Vec<String>,
     pub destination_path: String,
+    #[serde(default)]
+    pub delete_source_folder: bool,
 }
 
 #[derive(Serialize)]
@@ -1646,6 +1648,23 @@ pub async fn move_photos_and_folders(
 
     let mut moved_count = 0;
     let mut errors = Vec::new();
+
+    // Track source folders to delete (if delete_source_folder is true)
+    let mut source_folder_ids: std::collections::HashSet<i64> = std::collections::HashSet::new();
+
+    if request.delete_source_folder {
+        // Collect source folder IDs from photos
+        for photo_id in &request.photo_ids {
+            if let Ok(Some(photo)) = sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE id = ?")
+                .bind(photo_id)
+                .fetch_optional(pool.inner())
+                .await {
+                if let Some(folder_id) = photo.folder_id {
+                    source_folder_ids.insert(folder_id);
+                }
+            }
+        }
+    }
 
     // Move individual photos
     for photo_id in request.photo_ids {
@@ -1943,6 +1962,51 @@ pub async fn move_photos_and_folders(
                 }
             }
             Err(e) => errors.push(format!("Failed to move folder {}: {}", folder_path, e)),
+        }
+    }
+
+    // Delete source folders if requested
+    if request.delete_source_folder && !source_folder_ids.is_empty() {
+        for folder_id in source_folder_ids {
+            // Get folder path before deletion
+            let folder_result = sqlx::query_as::<_, Folder>("SELECT * FROM folders WHERE id = ?")
+                .bind(folder_id)
+                .fetch_optional(pool.inner())
+                .await;
+
+            if let Ok(Some(folder)) = folder_result {
+                // Check if folder is now empty (no photos left)
+                let photo_count: (i64,) = sqlx::query_as(
+                    "SELECT COUNT(*) FROM photos WHERE folder_id = ?"
+                )
+                .bind(folder_id)
+                .fetch_one(pool.inner())
+                .await
+                .unwrap_or((0,));
+
+                if photo_count.0 == 0 {
+                    // Delete physical folder if it exists and is empty
+                    let folder_path = Path::new(&folder.path);
+                    if folder_path.exists() {
+                        match fs::remove_dir(folder_path) {
+                            Ok(_) => {
+                                // Delete from database
+                                match sqlx::query("DELETE FROM folders WHERE id = ?")
+                                    .bind(folder_id)
+                                    .execute(pool.inner())
+                                    .await {
+                                    Ok(_) => {},
+                                    Err(e) => errors.push(format!("Failed to delete folder from DB: {}", e)),
+                                }
+                            }
+                            Err(e) => {
+                                // If we can't delete because it's not empty or other error, just log it
+                                errors.push(format!("Could not delete source folder {}: {}", folder.path, e));
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -2695,18 +2759,18 @@ pub async fn set_root_folder(pool: State<'_, SqlitePool>, path: String) -> Resul
     .await
     .map_err(|e| e.to_string())?;
 
-    // Create default folders "categories" and "imports" if they don't exist
-    let categories_path = Path::new(&path).join("categories");
-    let imports_path = Path::new(&path).join("imports");
+    // Create default folders "CATEGORIES" and "IMPORTS" if they don't exist
+    let categories_path = Path::new(&path).join("CATEGORIES");
+    let imports_path = Path::new(&path).join("IMPORTS");
 
     if !categories_path.exists() {
         fs::create_dir_all(&categories_path)
-            .map_err(|e| format!("Failed to create 'categories' folder: {}", e))?;
+            .map_err(|e| format!("Failed to create 'CATEGORIES' folder: {}", e))?;
     }
 
     if !imports_path.exists() {
         fs::create_dir_all(&imports_path)
-            .map_err(|e| format!("Failed to create 'imports' folder: {}", e))?;
+            .map_err(|e| format!("Failed to create 'IMPORTS' folder: {}", e))?;
     }
 
     // Scan and create all folders in the root path

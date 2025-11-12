@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
+import { settingsAPI } from "../api";
 
 export default function Sidebar({
   activeTab,
@@ -15,10 +16,19 @@ export default function Sidebar({
   const [userName, setUserName] = useState("");
 
   useEffect(() => {
-    // Function to load user name from localStorage
-    const loadUserName = () => {
-      const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
-      setUserName(userInfo.firstName || t('interface.user'));
+    // Function to load user name from database
+    const loadUserName = async () => {
+      try {
+        const [firstName, lastName] = await Promise.all([
+          settingsAPI.getFirstName(),
+          settingsAPI.getLastName()
+        ]);
+        const fullName = [firstName, lastName].filter(Boolean).join(' ');
+        setUserName(fullName || t('interface.user'));
+      } catch (error) {
+        console.error('Error loading user name:', error);
+        setUserName(t('interface.user'));
+      }
     };
 
     // Load initially
@@ -31,7 +41,7 @@ export default function Sidebar({
     return () => {
       window.removeEventListener("userInfoUpdated", loadUserName);
     };
-  }, []);
+  }, [t]);
 
   const menuItems = [
     {

@@ -52,7 +52,7 @@ export default function PhotoImport() {
     try {
       const rootFolder = await photosAPI.getRootFolder()
       if (rootFolder) {
-        const importPath = `${rootFolder}/imports`
+        const importPath = `${rootFolder}/IMPORTS`
         setImportFolder(importPath)
         setDestinationFolder(importPath) // Set as default
       }

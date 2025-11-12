@@ -401,6 +401,7 @@
     "unsavedChanges": "Modifications non enregistrées",
     "enterTextContent": "Saisissez le contenu du fichier...",
     "lastModified": "Dernière modification",
-    "saving": "Enregistrement..."
+    "saving": "Enregistrement...",
+    "deleteSourceFolder": "Supprimer le dossier source des photos"
   }
 }

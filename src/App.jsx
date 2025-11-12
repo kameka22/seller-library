@@ -12,6 +12,7 @@ import Sales from './components/Sales'
 import UpdateModal from './components/UpdateModal'
 import WelcomeModal from './components/WelcomeModal'
 import UserSettings from './components/UserSettings'
+import Documentation from './components/Documentation'
 
 function AppContent() {
   const { t } = useLanguage()
@@ -54,6 +55,8 @@ function AppContent() {
         return t('platforms.title')
       case 'platforms-sales':
         return t('platforms.salesTitle')
+      case 'documentation':
+        return t('sidebar.documentation')
       case 'user-settings':
         return t('user.settings')
       default:
@@ -75,6 +78,8 @@ function AppContent() {
         return t('platforms.description')
       case 'platforms-sales':
         return t('platforms.salesDescription')
+      case 'documentation':
+        return t('documentation.intro')
       case 'user-settings':
         return t('user.settingsDescription')
       default:
@@ -168,6 +173,7 @@ function AppContent() {
           {activeTab === 'photos-collection' && <PhotoManager />}
           {activeTab === 'platforms-list' && <PlatformList />}
           {activeTab === 'platforms-sales' && <Sales />}
+          {activeTab === 'documentation' && <Documentation />}
           {activeTab === 'user-settings' && <UserSettings />}
         </main>
       </div>

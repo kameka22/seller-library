@@ -6,7 +6,6 @@ dist/
 
 # Tauri
 /src-tauri/target/
-src-tauri/Cargo.lock
 src-tauri/.DS_Store
 
 # Rust

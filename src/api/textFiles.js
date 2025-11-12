@@ -25,4 +25,11 @@ export const textFilesAPI = {
   deleteDbOnly: async (fileId) => {
     return await invoke('delete_text_file_db_only', { fileId })
   },
+
+  // Créer un fichier texte
+  createDescriptionFile: async (folderPath) => {
+    return await invoke('create_description_file', {
+      request: { folder_path: folderPath }
+    })
+  },
 }
